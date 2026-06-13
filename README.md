@@ -22,21 +22,36 @@ This scaffold is designed for a single RTX 5080 16GB workstation first, then can
 
 ## Architecture
 
+model-port is organized as a local-first ModelOps gateway.
+
+It separates:
+
+- experiment tracking from promotion control
+- model evaluation from rollout decision
+- vendor submission from production readiness
+- cloud-simulation validation from strict edge-target validation
+
+![model-port architecture](docs/assets/model-port-architecture.svg)
+
+<details>
+<summary>Mermaid source</summary>
+
 ```mermaid
 flowchart LR
-  V["Vendor Model Submission"] --> VAL["Validation"]
-  VAL --> FT["Fine-tuning Pipeline"]
-  FT --> WB["W&B Runs / Artifacts / Tables"]
-  FT --> EVAL["Evaluation + Drift Report"]
-  EVAL --> MLF["W&B Model Registry"]
-  MLF --> PKG["Package Model Manifest"]
-  PKG --> ROLL["Rollout Controller"]
-  ROLL --> D1["Device Agent Canary"]
-  ROLL --> D2["Device Agent Stable"]
-  D1 --> TEL["Telemetry"]
-  D2 --> TEL
-  TEL --> PROM["Prometheus / Grafana later"]
+  A["Vendor Model Submission"] --> B["Fine-tuning Pipeline<br/>LoRA / QLoRA"]
+  B --> C["W&B Tracking<br/>runs / tables / artifacts"]
+  C --> D["Evaluation + Drift Report"]
+  D --> E["Model Manifest"]
+  E --> F["model-port API<br/>register / promote"]
+  F --> G{"Quality Gate"}
+  G -->|passed| H["Promote to Staging"]
+  G -->|failed| I["Block Promotion<br/>keep rejection metadata"]
+  H --> J["Canary Rollout<br/>future"]
+  J --> K["Device Telemetry<br/>future"]
+  K --> G
 ```
+
+</details>
 
 ## Quickstart
 
@@ -76,6 +91,12 @@ just compose-up
 
 - API: http://localhost:18080
 - W&B: http://localhost:8081
+
+Check the API health endpoint with:
+
+```bash
+curl http://127.0.0.1:18080/healthz
+```
 
 If those ports are busy, override them in `.env` or inline:
 
@@ -152,6 +173,11 @@ docker compose exec trainer python -m model_port.pipelines.evaluate \
   --output artifacts/eval/eval_report.json
 ```
 
+The evaluation run logs sample predictions, latency, and pass/fail status to a
+W&B Table for visual inspection:
+
+![W&B evaluation table](docs/assets/w%26b-eval.png)
+
 Build a manifest from the evaluation report:
 
 ```bash
@@ -171,8 +197,7 @@ curl -X POST http://127.0.0.1:18080/models/register \
     "model_name": "smart-captioner",
     "version": "0.1.0",
     "manifest_path": "artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml",
-    "stage": "candidate",
-    "quality_gate_passed": false
+    "stage": "candidate"
   }'
 ```
 
@@ -196,6 +221,15 @@ the candidate lineage but adds rejection context. A latency failure is logged wi
 aliases like `candidate`, `rejected-latency`, and `v0.1.0`, plus metadata such as
 `quality_gate_passed`, `reject_reason`, `p95_latency_ms`, `max_p95_latency_ms`,
 `drift_score`, and `failure_rate`.
+
+model-port intentionally keeps failed candidates in the registry with rejection
+metadata instead of deleting them. This preserves vendor lineage, evaluation
+evidence, and promotion history for auditability.
+
+Vendors cannot self-declare a model as passed. Promotion eligibility is derived
+from `evaluation.passed` in the evaluated manifest. The MVP uses a local JSON
+registry for transparency; production backends should use PostgreSQL, SQLite
+with locking, or object storage with versioned writes.
 
 ## Model Promotion Demo
 
@@ -271,8 +305,7 @@ curl -X POST http://127.0.0.1:18080/models/register \
     "model_name": "smart-captioner",
     "version": "0.1.1",
     "manifest_path": "artifacts/manifests/vendor-demo-smart-captioner-0.1.1.yaml",
-    "stage": "candidate",
-    "quality_gate_passed": true
+    "stage": "candidate"
   }'
 
 curl -X POST http://127.0.0.1:18080/models/vendor-demo.smart-captioner.0.1.1/promote \

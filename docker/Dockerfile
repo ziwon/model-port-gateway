@@ -1,0 +1,30 @@
+FROM python:3.11-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml README.md ./
+COPY model_port ./model_port
+COPY configs ./configs
+COPY scripts ./scripts
+
+RUN pip install --upgrade pip
+
+FROM base AS api
+
+RUN pip install -e '.[api]'
+
+CMD ["uvicorn", "model_port.api.main:app", "--host", "0.0.0.0", "--port", "8080"]
+
+FROM base AS trainer
+
+RUN pip install -e '.[train,api]'
+
+CMD ["sleep", "infinity"]

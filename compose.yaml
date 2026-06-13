@@ -1,0 +1,63 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: api
+    command: uvicorn model_port.api.main:app --reload --host 0.0.0.0 --port 8080
+    environment:
+      MODEL_PORT_ENV: local
+      WANDB_BASE_URL: http://wandb:8080
+      WANDB_API_KEY: ${WANDB_API_KEY:-}
+      WANDB_PROJECT: model-port
+    ports:
+      - "127.0.0.1:${MODEL_PORT_API_PORT:-18080}:8080"
+    volumes:
+      - .:/app
+      - model-artifacts:/app/artifacts
+    depends_on:
+      wandb:
+        condition: service_started
+
+  trainer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: trainer
+    command: sleep infinity
+    environment:
+      MODEL_PORT_ENV: local
+      WANDB_BASE_URL: http://wandb:8080
+      WANDB_API_KEY: ${WANDB_API_KEY:-}
+      WANDB_PROJECT: model-port
+      # Default to offline so training runs without a server account; set
+      # WANDB_MODE=online in .env once a valid 40+ char local key is in place.
+      WANDB_MODE: ${WANDB_MODE:-offline}
+      HF_HOME: /cache/huggingface
+      TRANSFORMERS_CACHE: /cache/huggingface
+    volumes:
+      - .:/app
+      - hf-cache:/cache/huggingface
+      - model-artifacts:/app/artifacts
+    depends_on:
+      wandb:
+        condition: service_started
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  wandb:
+    image: wandb/local:latest
+    ports:
+      - "127.0.0.1:${WANDB_PORT:-8081}:8080"
+    volumes:
+      - wandb-data:/vol
+
+volumes:
+  wandb-data:
+  hf-cache:
+  model-artifacts:

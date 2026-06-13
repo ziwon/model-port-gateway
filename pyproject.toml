@@ -1,0 +1,52 @@
+[project]
+name = "model-port"
+version = "0.1.0"
+description = "Multi-vendor ModelOps gateway for AI model fine-tuning, registry, and rollout"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.8",
+  "pydantic-settings>=2.3",
+  "typer[all]>=0.12",
+  "rich>=13.7",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+registry = [
+  # Cap below 0.27: newer wandb tightened client-side API-key validation
+  # (requires a 40+ char secret) and rejects the local W&B server's
+  # `wandb_v1_` keys, which the server itself accepts.
+  "wandb>=0.18.7,<0.19",
+]
+train = [
+  "torch>=2.7",
+  "torchvision>=0.22",
+  "transformers>=4.51",
+  "datasets>=2.20",
+  "accelerate>=0.33",
+  "peft>=0.12",
+  "trl>=0.9",
+  "pillow>=10.4",
+  "num2words>=0.5.13",
+  "bitsandbytes>=0.43; platform_system == 'Linux'",
+  "pandas>=2.2",
+  "scikit-learn>=1.5",
+  "wandb>=0.18.7,<0.19",
+]
+dev = [
+  "pytest>=8.2",
+  "ruff>=0.5",
+]
+api = [
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.setuptools.packages.find]
+include = ["model_port*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

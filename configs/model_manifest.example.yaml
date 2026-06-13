@@ -1,0 +1,50 @@
+model:
+  name: smart-captioner
+  version: 0.1.0
+  vendor: vendor-demo
+  task: image-captioning
+  runtime: transformers
+  base_model: HuggingFaceTB/SmolVLM2-500M-Video-Instruct
+  artifact_uri: artifacts/models/smolvlm2-caption-lora
+  checksum: sha256:placeholder
+  license: Apache-2.0-compatible-check-required
+
+training:
+  method: lora
+  wandb_project: model-port
+  wandb_run_id: dry-run
+  dataset_name: lmms-lab/COCO-Caption
+  dataset_version: sample-v0.1
+
+inference:
+  max_new_tokens: 16
+  do_sample: false
+  num_beams: 1
+  temperature: 0.0
+
+evaluation:
+  profile: cloud-sim
+  bleu: null
+  rouge_l: null
+  p95_latency_ms: null
+  drift_score: null
+  passed: false
+
+quality_gates:
+  cloud_sim:
+    max_p95_latency_ms: 3000
+    max_failure_rate: 0.01
+    max_drift_score: 0.2
+  edge_target:
+    max_p95_latency_ms: 100
+    max_failure_rate: 0.01
+    max_drift_score: 0.2
+    max_model_size_mb: 500
+
+deployment:
+  stage: candidate
+  rollout_strategy: canary
+  canary_percent: 10
+  rollback_policy:
+    max_error_rate: 0.01
+    max_p95_latency_ms: 250

@@ -1,0 +1,57 @@
+project: model-port
+vendor: vendor-demo
+base_model: HuggingFaceTB/SmolVLM2-500M-Video-Instruct
+# Use this after the MVP succeeds on 500M:
+# base_model: HuggingFaceTB/SmolVLM2-2.2B-Instruct
+
+dataset:
+  name: local-sample-captions
+  split: train
+  local_jsonl: data/sample_captions.jsonl
+  max_samples: 32
+  train_ratio: 0.9
+
+training:
+  method: lora
+  model_name: smart-captioner
+  version: 0.1.1
+  output_dir: artifacts/models/smolvlm2-caption-lora
+  num_train_epochs: 1
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 0.00002
+  max_seq_length: 512
+  gradient_checkpointing: true
+  fp16: false
+  bf16: true
+  load_in_4bit: true
+  lora:
+    r: 8
+    alpha: 16
+    dropout: 0.05
+    target_modules: auto
+
+inference:
+  max_new_tokens: 16
+  do_sample: false
+  num_beams: 1
+  temperature: 0.0
+
+wandb:
+  project: model-port
+  job_type: finetune
+  tags: [smolvlm2, lora, edge-ai, rtx5080, v0.1.1]
+
+validation:
+  min_exact_caption_score: 0.0
+  active_profile: cloud_sim
+  quality_gates:
+    cloud_sim:
+      max_p95_latency_ms: 3000
+      max_failure_rate: 0.01
+      max_drift_score: 0.2
+    edge_target:
+      max_p95_latency_ms: 100
+      max_failure_rate: 0.01
+      max_drift_score: 0.2
+      max_model_size_mb: 500

@@ -1,5 +1,11 @@
 # model-port
 
+[![CI](https://github.com/ziwon/model-port/actions/workflows/ci.yaml/badge.svg)](https://github.com/ziwon/model-port/actions/workflows/ci.yaml)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![FastAPI](https://img.shields.io/badge/api-FastAPI-009688)
+![Docker Compose](https://img.shields.io/badge/runtime-Docker%20Compose-2496ED)
+![W%26B](https://img.shields.io/badge/tracking-W%26B-FFBE00)
+
 A lightweight ModelOps gateway for multi-vendor AI model intake, fine-tuning, validation, registry promotion, and progressive rollout.
 
 This scaffold is designed for a single RTX 5080 16GB workstation first, then can be extended to Kubernetes.
@@ -38,7 +44,7 @@ flowchart LR
 python -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install -e .[train,dev]
+pip install -e .[train,dev,api]
 cp .env.example .env
 
 # Optional

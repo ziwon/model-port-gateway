@@ -9,6 +9,7 @@ import typer
 from rich import print
 
 from model_port.common.config import load_yaml
+from model_port.registry.wandb_utils import wandb_project
 
 app = typer.Typer(help="Register model metadata to the W&B Model Registry.")
 
@@ -50,7 +51,7 @@ def main(
     import wandb
 
     run = wandb.init(
-        project=os.getenv("WANDB_PROJECT", model.get("wandb_project", "model-port")),
+        project=wandb_project(data),
         job_type="registry",
         name=f"register-{name}-{model['version']}",
         tags=["registry", model["vendor"], model["task"]],
@@ -77,6 +78,7 @@ def main(
         print(f"[green]Registered {name}:{model['version']} in W&B registry[/green]")
     finally:
         run.finish()
+
 
 def _load_eval_report(path: Path) -> dict[str, Any] | None:
     if not path.exists():

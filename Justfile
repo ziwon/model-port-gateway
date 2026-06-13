@@ -15,7 +15,7 @@ dryrun:
     python -m model_port.registry.wandb_register --manifest configs/model_manifest.example.yaml --dry-run
 
 api:
-    uvicorn model_port.api.main:app --reload --host 0.0.0.0 --port 8080
+    uvicorn model_port.api.main:app --reload --host 0.0.0.0 --port ${MODEL_PORT_API_PORT:-18080}
 
 compose-up:
     docker compose up --build

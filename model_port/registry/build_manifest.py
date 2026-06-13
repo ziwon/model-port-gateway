@@ -10,6 +10,8 @@ from model_port.common.quality import normalize_profile_name
 
 
 def main(base: Path, eval_report: Path, output: Path) -> None:
+    from rich import print
+
     manifest = load_yaml(base)
     report = json.loads(eval_report.read_text(encoding="utf-8"))
     updated = build_manifest(manifest, report)

@@ -65,3 +65,9 @@ def test_quality_gates_accept_canonical_and_legacy_names():
     results = evaluate_all_quality_gates(metrics, validation)
     assert results["cloud-sim"]["passed"] is True
     assert results["edge-target"]["passed"] is False
+
+
+def test_transformers_multimodal_auto_class_when_installed():
+    transformers = pytest.importorskip("transformers")
+
+    assert hasattr(transformers, "AutoModelForMultimodalLM")

@@ -1,6 +1,7 @@
 from model_port.common.config import dump_yaml, load_yaml
 from model_port.registry.build_manifest import build_manifest
 from model_port.registry.store import JsonModelRegistry, ModelRegistration
+from model_port.registry.wandb_utils import wandb_project
 
 
 def test_manifest_has_required_sections():
@@ -8,6 +9,18 @@ def test_manifest_has_required_sections():
     assert "model" in data
     assert "training" in data
     assert data["model"]["name"] == "smart-captioner"
+
+
+def test_wandb_project_comes_from_training_section(monkeypatch):
+    monkeypatch.delenv("WANDB_PROJECT", raising=False)
+
+    assert wandb_project(load_yaml("configs/model_manifest.example.yaml")) == "model-port"
+
+
+def test_wandb_project_env_overrides_manifest(monkeypatch):
+    monkeypatch.setenv("WANDB_PROJECT", "override-project")
+
+    assert wandb_project(load_yaml("configs/model_manifest.example.yaml")) == "override-project"
 
 
 def test_build_manifest_blocks_failed_quality_gate():

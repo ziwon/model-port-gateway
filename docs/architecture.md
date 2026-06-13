@@ -11,6 +11,11 @@ It separates:
 
 ## Lifecycle
 
+The lifecycle starts with a submitted model and ends with a governed promotion
+decision. Each step produces an artifact that the next step can verify: training
+produces a candidate, evaluation produces a report, the manifest captures the
+candidate state, and the API applies the quality gate before rollout.
+
 ```mermaid
 flowchart LR
   A["Vendor Model Submission"] --> B["Fine-tuning Pipeline<br/>LoRA / QLoRA"]
@@ -27,6 +32,12 @@ flowchart LR
 ```
 
 ## Detailed View
+
+The detailed view expands the local MVP into the components that own each part
+of the model lifecycle. The current implementation runs on Docker Compose, but
+the boundaries are intentionally close to the future k3s or Kubernetes shape:
+trainer, tracking, registry gateway, policy, and rollout remain separate
+concerns.
 
 ```mermaid
 flowchart LR
@@ -103,6 +114,87 @@ flowchart LR
   STABLE --> TEL
   TEL --> GATE
 ```
+
+The vendor boundary represents external vendors or internal model teams. They
+provide a model, dataset reference, and submission manifest, but they do not
+control promotion status.
+
+The developer workstation boundary is the MVP runtime. `Justfile` commands and
+Docker Compose wire together the API, trainer, and W&B services so the full
+pipeline can be exercised on one machine before moving to k3s.
+
+The trainer service owns data preparation, LoRA or QLoRA fine-tuning, and
+evaluation execution. It produces artifacts and reports, but avoids making
+rollout decisions directly.
+
+W&B is the default experiment and artifact system. It stores training runs,
+evaluation tables, model artifacts, aliases, and rejection metadata so a failed
+candidate remains auditable.
+
+The model-port API gateway owns registration and promotion control. It reads
+the evaluated manifest, persists a local registry record, and blocks promotion
+when the quality gate fails.
+
+Quality gate profiles separate development validation from strict edge targets.
+For example, `cloud-sim` can validate that the pipeline and model behavior are
+reasonable, while `edge-target` can block candidates that are too slow or too
+large for deployment.
+
+The rollout layer is future-facing in the MVP. It sketches where canary rollout,
+stable rollout, runtime telemetry, and feedback into later quality decisions
+will live.
+
+## Runtime Sequence
+
+The runtime sequence shows the promotion path as a control loop, not just a
+training job. Training and evaluation produce evidence, while the API and
+quality gate decide whether the model can move forward.
+
+```mermaid
+sequenceDiagram
+  participant Vendor
+  participant Trainer
+  participant WNB as W&B
+  participant Eval as Evaluation
+  participant API as model-port API
+  participant Gate as Quality Gate
+  participant Rollout as Rollout Controller
+
+  Vendor->>Trainer: Submit model + dataset + manifest
+  Trainer->>Trainer: Fine-tune v1 -> v2 with LoRA
+  Trainer->>WNB: Log run metrics and artifacts
+  Trainer->>Eval: Run base vs candidate inference
+  Eval->>WNB: Log eval table and drift metrics
+  Eval->>API: Register model manifest
+  API->>Gate: Check quality profile
+  Gate-->>API: passed or blocked
+
+  alt Quality gate passed
+    API->>Rollout: Promote candidate to staging
+    Rollout->>Rollout: Canary rollout
+  else Quality gate failed
+    API-->>Vendor: Block promotion with reject reason
+    API->>WNB: Keep rejected candidate metadata
+  end
+```
+
+1. Vendor submission provides the base model, dataset reference, and manifest
+   metadata. The manifest identifies the vendor, model name, version, task, and
+   runtime contract.
+2. The trainer owns fine-tuning and experiment logging. It writes run metrics,
+   model artifacts, and lineage to W&B, but it does not decide production
+   readiness.
+3. Evaluation compares the base model and candidate model on the same dataset.
+   It records latency, failure rate, drift metrics, and sample predictions in
+   W&B tables.
+4. The evaluated manifest becomes the handoff contract to the model-port API.
+   Promotion eligibility is derived from the manifest evaluation section.
+5. The quality gate applies a named profile such as `cloud-sim` or
+   `edge-target`. A passing result can move to staging; a failing result blocks
+   promotion and preserves rejection metadata.
+6. The rollout controller is intentionally future-facing in the MVP. It
+   represents the next layer for canary rollout, runtime telemetry, and feedback
+   into later quality gate decisions.
 
 ## Governance
 

@@ -68,7 +68,7 @@ build-manifest-v011:
 
 register:
     docker compose up -d --build wandb trainer
-    docker compose exec trainer python -m model_port.registry.wandb_register --manifest configs/model_manifest.example.yaml --eval-report artifacts/eval/eval_report.json
+    docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml --eval-report artifacts/eval/eval_report.json --model-dir artifacts/models/smolvlm2-caption-lora
 
 register-v011:
     docker compose up -d --build wandb trainer
@@ -76,11 +76,11 @@ register-v011:
 
 api-register:
     docker compose up -d --build api
-    curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/register -H 'Content-Type: application/json' -d '{"vendor":"vendor-demo","model_name":"smart-captioner","version":"0.1.0","manifest_path":"artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml","stage":"candidate","quality_gate_passed":false}'
+    curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/register -H 'Content-Type: application/json' -d '{"vendor":"vendor-demo","model_name":"smart-captioner","version":"0.1.0","manifest_path":"artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml","stage":"candidate"}'
 
 api-register-v011:
     docker compose up -d --build api
-    curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/register -H 'Content-Type: application/json' -d '{"vendor":"vendor-demo","model_name":"smart-captioner","version":"0.1.1","manifest_path":"artifacts/manifests/vendor-demo-smart-captioner-0.1.1.yaml","stage":"candidate","quality_gate_passed":true}'
+    curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/register -H 'Content-Type: application/json' -d '{"vendor":"vendor-demo","model_name":"smart-captioner","version":"0.1.1","manifest_path":"artifacts/manifests/vendor-demo-smart-captioner-0.1.1.yaml","stage":"candidate"}'
 
 promote-v011:
     curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/vendor-demo.smart-captioner.0.1.1/promote -H 'Content-Type: application/json' -d '{"target_stage":"staging"}'
@@ -91,4 +91,4 @@ local-mlops:
     docker compose exec trainer python -m model_port.pipelines.finetune --config configs/train.smolvlm.yaml
     docker compose exec trainer python -m model_port.pipelines.evaluate --config configs/train.smolvlm.yaml --model-dir artifacts/models/smolvlm2-caption-lora --dataset data/sample_captions.jsonl --output artifacts/eval/eval_report.json
     docker compose exec trainer python -m model_port.registry.build_manifest --base configs/model_manifest.example.yaml --eval-report artifacts/eval/eval_report.json --output artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml
-    docker compose exec trainer python -m model_port.registry.wandb_register --manifest configs/model_manifest.example.yaml --eval-report artifacts/eval/eval_report.json
+    docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml --eval-report artifacts/eval/eval_report.json --model-dir artifacts/models/smolvlm2-caption-lora

@@ -1,7 +1,30 @@
+import pytest
+
 from model_port.common.config import dump_yaml, load_yaml
 from model_port.registry.build_manifest import build_manifest
 from model_port.registry.store import JsonModelRegistry, ModelRegistration
 from model_port.registry.wandb_utils import wandb_project
+
+
+def test_api_registration_rejects_client_quality_gate_field():
+    pytest.importorskip("fastapi")
+    from pydantic import ValidationError
+
+    from model_port.api.main import ModelRegistration as ApiModelRegistration
+
+    try:
+        ApiModelRegistration(
+            vendor="vendor-demo",
+            model_name="smart-captioner",
+            version="0.1.0",
+            manifest_path="artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml",
+            stage="candidate",
+            quality_gate_passed=True,
+        )
+    except ValidationError as exc:
+        assert "quality_gate_passed" in str(exc)
+    else:
+        raise AssertionError("quality_gate_passed must not be accepted from clients")
 
 
 def test_manifest_has_required_sections():
@@ -113,7 +136,6 @@ def test_registry_blocks_failed_quality_gate_promotion(tmp_path):
             version="0.1.0",
             manifest_path=str(manifest_path),
             stage="candidate",
-            quality_gate_passed=False,
         )
     )
     assert record["id"] == "vendor-demo.smart-captioner.0.1.0"
@@ -171,7 +193,6 @@ def test_registry_promotes_passed_quality_gate(tmp_path):
             version="0.1.1",
             manifest_path=str(manifest_path),
             stage="candidate",
-            quality_gate_passed=True,
         )
     )
 
@@ -186,3 +207,43 @@ def test_registry_promotes_passed_quality_gate(tmp_path):
         "to_stage": "staging",
         "model": "vendor-demo.smart-captioner.0.1.1",
     }
+
+
+def test_registry_derives_quality_gate_from_manifest_only(tmp_path):
+    manifest = build_manifest(
+        load_yaml("configs/model_manifest.example.yaml"),
+        {
+            "model_name": "smart-captioner",
+            "version": "0.1.2",
+            "vendor": "vendor-demo",
+            "metrics": {
+                "p95_latency_ms": 2117.4231,
+                "failure_rate": 0.0,
+                "drift_score": 0.0388,
+            },
+            "quality_gate": {
+                "profile": "edge-target",
+                "max_p95_latency_ms": 100.0,
+                "max_failure_rate": 0.01,
+                "max_drift_score": 0.2,
+                "passed": False,
+                "reject_reason": "p95_latency_ms_exceeded",
+            },
+        },
+    )
+    manifest_path = tmp_path / "manifest.yaml"
+    dump_yaml(manifest, manifest_path)
+
+    registry = JsonModelRegistry(tmp_path / "registry" / "models.json")
+    record = registry.register(
+        ModelRegistration(
+            vendor="vendor-demo",
+            model_name="smart-captioner",
+            version="0.1.2",
+            manifest_path=str(manifest_path),
+            stage="candidate",
+        )
+    )
+
+    assert record["quality_gate_passed"] is False
+    assert record["promotion_blocked"] is True

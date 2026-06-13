@@ -15,7 +15,6 @@ class ModelRegistration:
     version: str
     manifest_path: str
     stage: str = "candidate"
-    quality_gate_passed: bool = False
 
 
 class JsonModelRegistry:
@@ -92,7 +91,7 @@ def record_from_manifest(
     vendor = req.vendor or model.get("vendor")
     model_name = req.model_name or model.get("name")
     version = req.version or str(model.get("version"))
-    quality_passed = bool(evaluation.get("passed", req.quality_gate_passed))
+    quality_passed = bool(evaluation.get("passed", False))
     stage = req.stage or deployment.get("stage", "candidate")
     return {
         "id": model_id(vendor, model_name, version),

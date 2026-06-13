@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from model_port.registry.store import JsonModelRegistry, ModelRegistration as StoreRegistration
 
@@ -19,12 +19,13 @@ class ModelSubmission(BaseModel):
 
 
 class ModelRegistration(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     vendor: str
     model_name: str
     version: str
     manifest_path: str
     stage: str = "candidate"
-    quality_gate_passed: bool = False
 
 
 class PromotionRequest(BaseModel):
@@ -52,7 +53,6 @@ def register_model(req: ModelRegistration) -> dict[str, Any]:
                 version=req.version,
                 manifest_path=req.manifest_path,
                 stage=req.stage,
-                quality_gate_passed=req.quality_gate_passed,
             )
         )
     except FileNotFoundError as exc:

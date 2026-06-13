@@ -22,6 +22,7 @@ from model_port.common.quality import (
     evaluate_quality_gate,
     quality_gate_config,
 )
+from model_port.pipelines.eval_wandb import quality_gate_table_rows, wandb_summary
 
 app = typer.Typer(help="Evaluate base/candidate VLM outputs and prepare drift reports.")
 
@@ -314,6 +315,7 @@ def _log_wandb_table(
 
     import wandb
 
+    quality_rows = quality_gate_table_rows(report)
     run = wandb.init(
         project=os.getenv("WANDB_PROJECT", cfg.wandb.get("project", "model-port")),
         name=f"eval-{report['vendor']}-{report['model_name']}-{report['version']}",
@@ -361,8 +363,19 @@ def _log_wandb_table(
                 passed,
             )
 
+        quality_table = wandb.Table(columns=["metric", "value", "threshold", "passed", "profile"])
+        for row in quality_rows:
+            quality_table.add_data(
+                row["metric"],
+                row["value"],
+                row["threshold"],
+                row["passed"],
+                row["profile"],
+            )
+
         wandb.log({
             "eval/predictions": table,
+            "eval/quality_gate": quality_table,
             "eval/caption_length_mean": report["metrics"]["caption_length_mean"],
             "eval/p50_latency_ms": report["metrics"]["p50_latency_ms"],
             "eval/p95_latency_ms": report["metrics"]["p95_latency_ms"],
@@ -371,6 +384,7 @@ def _log_wandb_table(
             "quality_gate/passed": int(report["quality_gate"]["passed"]),
             "quality_gate/profile": report["quality_gate"]["profile"],
         })
+        wandb.summary.update(wandb_summary(report))
     finally:
         run.finish()
 

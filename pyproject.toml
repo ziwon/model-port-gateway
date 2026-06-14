@@ -4,11 +4,11 @@ version = "0.1.0"
 description = "Multi-vendor ModelOps gateway for AI model fine-tuning, registry, and rollout"
 requires-python = ">=3.11"
 dependencies = [
-  "pydantic>=2.8",
-  "pydantic-settings>=2.3",
-  "typer[all]>=0.12",
-  "rich>=13.7",
-  "pyyaml>=6.0",
+  "pydantic>=2.13.4",
+  "pydantic-settings>=2.14.1",
+  "typer[all]>=0.26.7",
+  "rich>=15.0.0",
+  "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
@@ -16,32 +16,32 @@ registry = [
   # Cap below 0.27: newer wandb tightened client-side API-key validation
   # (requires a 40+ char secret) and rejects the local W&B server's
   # `wandb_v1_` keys, which the server itself accepts.
-  "wandb>=0.18.7,<0.19",
+  "wandb>=0.27.2,<0.28",
 ]
 train = [
-  "torch>=2.7",
-  "torchvision>=0.22",
+  "torch>=2.12.0",
+  "torchvision>=0.27.0",
   "transformers>=5.12",
-  "datasets>=2.20",
-  "accelerate>=0.33",
-  "peft>=0.12",
-  "trl>=0.9",
-  "pillow>=10.4",
-  "num2words>=0.5.13",
-  "bitsandbytes>=0.43; platform_system == 'Linux'",
-  "pandas>=2.2",
-  "scikit-learn>=1.5",
-  "onnx>=1.16",
-  "onnxruntime>=1.18",
-  "wandb>=0.18.7,<0.19",
+  "datasets>=5.0.0",
+  "accelerate>=1.14.0",
+  "peft>=0.19.1",
+  "trl>=1.6.0",
+  "pillow>=12.2.0",
+  "num2words>=0.5.14",
+  "bitsandbytes>=0.49.2; platform_system == 'Linux'",
+  "pandas>=3.0.3",
+  "scikit-learn>=1.9.0",
+  "onnx>=1.21.0",
+  "onnxruntime>=1.26.0",
+  "wandb>=0.27.2,<0.28",
 ]
 dev = [
-  "pytest>=8.2",
-  "ruff>=0.5",
+  "pytest>=9.1.0",
+  "ruff>=0.15.17",
 ]
 api = [
-  "fastapi>=0.111",
-  "uvicorn[standard]>=0.30",
+  "fastapi>=0.137.0",
+  "uvicorn[standard]>=0.49.0",
 ]
 
 [tool.ruff]

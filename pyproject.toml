@@ -27,7 +27,7 @@ train = [
   "peft>=0.12",
   "trl>=0.9",
   "pillow>=10.4",
-  "num2words>=0.5.13",
+  "num2words>=0.5.14",
   "bitsandbytes>=0.43; platform_system == 'Linux'",
   "pandas>=2.2",
   "scikit-learn>=1.5",

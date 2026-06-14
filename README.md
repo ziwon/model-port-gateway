@@ -8,6 +8,8 @@
 
 A lightweight ModelOps gateway for multi-vendor AI model intake, fine-tuning, validation, registry promotion, and progressive rollout.
 
+![](./docs/assets/bg-wide.png)
+
 This scaffold is designed for a single RTX 5080 16GB workstation first, then can be extended to Kubernetes.
 
 ## Default demo track
@@ -155,6 +157,10 @@ The sample dataset is a small JSONL file with local generated images:
 {"image_path":"images/sample_001.jpg","prompt":"Describe this image.","answer":"A person is sitting at a desk with a laptop."}
 ```
 
+Image paths are local files by default. `data:image` values are supported for
+inline samples, but HTTP(S) image URLs are disabled unless
+`MODEL_PORT_ALLOW_REMOTE_IMAGES=1` is set for a trusted dataset.
+
 Create it inside the trainer container with:
 
 ```bash
@@ -293,7 +299,7 @@ Promotion result:
 
 ### Demo 2: Scratch Edge Classifier Rejected
 
-`edge-object-classifier` v0.2.x is the first edge-friendly attempt. Instead of
+`edge-scene-classifier` v0.2.x is the first edge-friendly attempt. Instead of
 forcing a VLM into an edge target, this candidate uses a small MobileNetV3-Small
 classifier trained from scratch. The model is fast and small enough for the
 `edge-target` profile, but the promotion gate still blocks it because accuracy
@@ -301,7 +307,7 @@ is too low and distribution drift is too high.
 
 | Field | Value |
 |---|---|
-| Model | `edge-object-classifier` |
+| Model | `edge-scene-classifier` |
 | Version | `0.2.x` |
 | Type | scratch MobileNetV3-Small classifier |
 | Gate | `edge-target` |
@@ -310,10 +316,10 @@ is too low and distribution drift is too high.
 
 | Metric | Value | Gate | Result |
 |---|---:|---:|---|
-| accuracy | 0.296 | 0.55 minimum | Failed |
+| accuracy | 0.296 | 0.8 minimum | Failed |
 | p95 latency | 5.47 ms | 100 ms | Passed |
 | failure rate | 0.0 | 0.01 | Passed |
-| drift score | 0.34 | 0.3 | Failed |
+| drift score | 0.34 | 0.2 | Failed |
 | model size | 5.88 MB | 100 MB | Passed |
 
 Promotion result:
@@ -323,7 +329,7 @@ Promotion result:
   "status": "blocked",
   "reason": "quality_gate_failed",
   "details": {
-    "reject_reason": "accuracy_below_minimum"
+    "reject_reason": "drift_score_exceeded"
   }
 }
 ```
@@ -471,13 +477,43 @@ Completed baseline scope:
   and model size.
 - Manifest generation, W&B registry logging, API registration, and promotion
   from candidate to staging.
+- ONNX export and runtime latency comparison against the same `edge-target`
+  quality gate.
+
+Runtime comparison:
+
+| Runtime | Accuracy | p95 Latency | Size | Gate |
+|---|---:|---:|---:|---|
+| PyTorch eager | 0.7600 | 5.7473 ms | 5.9484 MB | passed |
+| ONNX Runtime CPU | 0.7580 | 22.6464 ms | 5.8389 MB | passed |
+| ONNX Runtime CUDA | 0.7600 | 1.6945 ms | 5.8389 MB | passed |
+
+Run the comparison:
+
+```bash
+just export-onnx-v030
+just evaluate-onnx-cpu-v030
+just compare-runtime-v030
+```
+
+CUDA evaluation uses a separate Compose profile and Docker target so the default
+trainer stays portable and does not mix `onnxruntime` with `onnxruntime-gpu`.
+
+```bash
+just trainer-cuda-deps
+just evaluate-onnx-cuda-v030
+just compare-runtime-cuda-v030
+```
+
+The current CUDA profile reports `CUDAExecutionProvider` and `CPUExecutionProvider`
+inside the container. If `trainer-cuda-deps` does not list
+`CUDAExecutionProvider`, check NVIDIA Container Toolkit, the host driver, and the
+CUDA image/runtime compatibility.
 
 Next scope:
 
 - Add a deterministic dataset split file so train/eval results are reproducible
   across machines and W&B runs.
-- Export the promoted classifier to ONNX, then evaluate both PyTorch and ONNX
-  latency under the same `edge-target` quality gate.
 - Add quantization-aware or post-training quantization experiments and compare
   `model_size_mb`, `p95_latency_ms`, and accuracy drop.
 - Extend the manifest with runtime targets, for example `torchvision`, `onnx`,
@@ -511,8 +547,8 @@ just promote-v030
 The v0.3.0 target is not a production-grade CIFAR-10 benchmark. It is a
 public-dataset promotion experiment that proves the same gateway lifecycle can
 block a weak scratch model and promote an improved transfer-learning candidate.
-ONNX export and quantized runtime comparison are the next implementation steps
-after this baseline.
+The ONNX CPU and CUDA runtime comparison is now part of the demo; quantized
+runtime comparison is the next implementation step after this baseline.
 
 ## Roadmap
 
@@ -521,7 +557,7 @@ after this baseline.
 - [x] Scratch edge classifier rejection demo
 - [x] Public-dataset pretrained edge classifier v0.3.0 promotion demo
 - [x] W&B model registry with aliases: `candidate`, `staging`, `production`
-- [ ] ONNX export and latency comparison
+- [x] ONNX export and latency comparison
 - [ ] Quantized edge-runtime comparison
 - [ ] SQLite registry backend for local production simulation
 - [ ] Real SmolVLM2 LoRA fine-tuning on RTX 5080

@@ -235,8 +235,27 @@ with locking, or object storage with versioned writes.
 
 model-port does not blindly promote every model. Heavy VLMs can pass local
 cloud-simulation validation but still fail a strict edge-target gate, while a
-small edge-friendly model can pass the same promotion policy and move to
-staging.
+small edge-friendly model must still prove that it meets accuracy, drift,
+latency, failure-rate, and model-size gates before it can move to staging.
+
+The current demo has three promotion experiments:
+
+- **Experiment 1: Heavy VLM candidate**: `smart-captioner` v0.1.0 is good for
+  visual understanding, but fails the strict edge latency gate. Promotion is
+  blocked.
+- **Experiment 2: Scratch edge classifier**: `edge-object-classifier` with a
+  scratch MobileNetV3 backbone passes latency and size gates, but fails accuracy
+  and drift gates. Promotion is blocked.
+- **Experiment 3: Pretrained edge classifier**: `edge-object-classifier` v0.3.0
+  uses a pretrained MobileNetV3 backbone and a fine-tuned classifier head. It
+  passes accuracy, latency, drift, failure-rate, and model-size gates, then moves
+  from candidate to staging.
+
+| Experiment | Model | Training Strategy | Accuracy | p95 Latency | Drift | Size | Gate Result | Promotion |
+|---|---|---|---:|---:|---:|---:|---|---|
+| v0.1.0 | `smart-captioner` | LoRA VLM fine-tuning | N/A | ~2117 ms | 0.0388 | adapter | Failed latency | Blocked |
+| v0.2.x | `edge-object-classifier` | Scratch MobileNetV3 | 0.296 | ~5.47 ms | 0.34 | ~5.88 MB | Failed accuracy/drift | Blocked |
+| v0.3.0 | `edge-object-classifier` | Pretrained MobileNetV3 + classifier head | 0.76 | 5.7473 ms | 0.142 | 5.9484 MB | Passed | Staging |
 
 ### Demo 1: VLM Candidate Rejected
 
@@ -272,30 +291,75 @@ Promotion result:
 }
 ```
 
-### Demo 2: Edge Classifier Promoted
+### Demo 2: Scratch Edge Classifier Rejected
 
-`edge-scene-classifier` v0.2.0 is the edge-friendly success case. Instead of
+`edge-object-classifier` v0.2.x is the first edge-friendly attempt. Instead of
 forcing a VLM into an edge target, this candidate uses a small MobileNetV3-Small
-scene classifier. The run shows that model-port can reject an unsuitable model
-and promote a better deployment fit through the same registry and quality gate
-path.
+classifier trained from scratch. The model is fast and small enough for the
+`edge-target` profile, but the promotion gate still blocks it because accuracy
+is too low and distribution drift is too high.
 
 | Field | Value |
 |---|---|
-| Model | `edge-scene-classifier` |
-| Version | `0.2.0` |
-| Type | MobileNetV3-Small scene classifier |
+| Model | `edge-object-classifier` |
+| Version | `0.2.x` |
+| Type | scratch MobileNetV3-Small classifier |
+| Gate | `edge-target` |
+| Result | promotion blocked |
+| Reason | accuracy and drift gates failed |
+
+| Metric | Value | Gate | Result |
+|---|---:|---:|---|
+| accuracy | 0.296 | 0.55 minimum | Failed |
+| p95 latency | 5.47 ms | 100 ms | Passed |
+| failure rate | 0.0 | 0.01 | Passed |
+| drift score | 0.34 | 0.3 | Failed |
+| model size | 5.88 MB | 100 MB | Passed |
+
+Promotion result:
+
+```json
+{
+  "status": "blocked",
+  "reason": "quality_gate_failed",
+  "details": {
+    "reject_reason": "accuracy_below_minimum"
+  }
+}
+```
+
+W&B training evidence:
+
+![v0.2.0 W&B training stability](docs/assets/wandb-train-v020-stability.png)
+
+The `train/epoch_loss` and `train/accuracy` panels show that the scratch
+MobileNetV3-Small run trains, but the later evaluation still blocks promotion
+because edge readiness requires accuracy and drift gates, not only low latency.
+
+### Demo 3: Pretrained Edge Classifier Promoted
+
+`edge-object-classifier` v0.3.0 keeps the same MobileNetV3-Small edge footprint
+but switches to a pretrained backbone with a fine-tuned classifier head on a
+balanced CIFAR-10 subset. This improves accuracy enough to pass the same
+`edge-target` promotion policy while preserving low latency and small model
+size.
+
+| Field | Value |
+|---|---|
+| Model | `edge-object-classifier` |
+| Version | `0.3.0` |
+| Type | pretrained MobileNetV3-Small classifier |
 | Gate | `edge-target` |
 | Result | promoted to staging |
 | Reason | accuracy, latency, failure rate, drift, and model size passed |
 
 | Metric | Value | Gate | Result |
 |---|---:|---:|---|
-| accuracy | 1.0 | 0.8 minimum | Passed |
-| p95 latency | 6.35 ms | 100 ms | Passed |
+| accuracy | 0.76 | 0.55 minimum | Passed |
+| p95 latency | 5.7473 ms | 100 ms | Passed |
 | failure rate | 0.0 | 0.01 | Passed |
-| drift score | 0.0 | 0.2 | Passed |
-| model size | 5.86 MB | 100 MB | Passed |
+| drift score | 0.142 | 0.3 | Passed |
+| model size | 5.9484 MB | 100 MB | Passed |
 
 Promotion result:
 
@@ -304,16 +368,9 @@ Promotion result:
   "status": "promoted",
   "from_stage": "candidate",
   "to_stage": "staging",
-  "model": "vendor-demo.edge-scene-classifier.0.2.0"
+  "model": "vendor-demo.edge-object-classifier.0.3.0"
 }
 ```
-
-W&B training evidence:
-
-![v0.2.0 W&B training stability](docs/assets/wandb-train-v020-stability.png)
-
-The `train/epoch_loss` and `train/accuracy` panels show the stabilized
-MobileNetV3-Small run converging on the synthetic edge-classification dataset.
 
 ### v0.1.1: Cloud-Sim Optimization
 
@@ -375,15 +432,23 @@ curl -X POST http://127.0.0.1:18080/models/vendor-demo.smart-captioner.0.1.1/pro
 
 ## v0.3.0 Roadmap
 
-v0.2.0 validates the model-port lifecycle with a synthetic edge-classification
-dataset. v0.3.0 should keep the same promotion contract but replace the
-synthetic success case with a more realistic edge deployment candidate.
+v0.2.x validated the model-port lifecycle with an edge-classification candidate
+that was fast and small but not accurate enough. v0.3.0 keeps the same promotion
+contract, replaces the synthetic-only path with a balanced CIFAR-10 subset, and
+uses transfer learning to produce a candidate that passes the edge gate.
 
-Planned scope:
+Completed baseline scope:
 
-- Replace or augment the synthetic scene dataset with a small public image
-  classification subset, such as CIFAR-10, Places-style scenes, or a curated
-  edge-camera sample.
+- Balanced CIFAR-10 subset exported into the same JSONL + local image contract
+  as the earlier synthetic dataset.
+- Pretrained MobileNetV3-Small backbone with a fine-tuned classifier head.
+- Edge-target evaluation for accuracy, p95 latency, failure rate, drift score,
+  and model size.
+- Manifest generation, W&B registry logging, API registration, and promotion
+  from candidate to staging.
+
+Next scope:
+
 - Add a deterministic dataset split file so train/eval results are reproducible
   across machines and W&B runs.
 - Export the promoted classifier to ONNX, then evaluate both PyTorch and ONNX
@@ -392,17 +457,17 @@ Planned scope:
   `model_size_mb`, `p95_latency_ms`, and accuracy drop.
 - Extend the manifest with runtime targets, for example `torchvision`, `onnx`,
   and future `tflite`.
-- Add a simple rollout simulation that promotes v0.3.0 to `staging`, assigns a
-  canary percentage, and records rollback metadata.
+- Add a rollout simulation that assigns a canary percentage and records rollback
+  metadata after staging promotion.
 - Move registry persistence from local JSON toward SQLite as the bridge between
   the Compose MVP and the later k3s/Helm deployment.
 
-Expected v0.3.0 demo outcome:
+Current demo outcome:
 
 ```text
 v0.1.0: VLM candidate rejected by edge-target latency
-v0.2.0: synthetic edge classifier promoted to staging
-v0.3.0: public-dataset edge classifier exported and promoted with runtime evidence
+v0.2.x: scratch edge classifier rejected by accuracy and drift gates
+v0.3.0: pretrained public-dataset edge classifier promoted to staging
 ```
 
 Initial v0.3.0 preparation uses a balanced CIFAR-10 subset exported into the
@@ -418,18 +483,21 @@ just api-register-v030
 just promote-v030
 ```
 
-The first v0.3.0 target is not a production-grade CIFAR-10 benchmark. It is a
-public-dataset promotion experiment that proves the same gateway lifecycle works
-after replacing the synthetic v0.2.0 data source. ONNX export and quantized
-runtime comparison are the next implementation steps after this baseline passes.
+The v0.3.0 target is not a production-grade CIFAR-10 benchmark. It is a
+public-dataset promotion experiment that proves the same gateway lifecycle can
+block a weak scratch model and promote an improved transfer-learning candidate.
+ONNX export and quantized runtime comparison are the next implementation steps
+after this baseline.
 
 ## Roadmap
 
 - [x] W&B Tables for eval examples and output drift
-- [x] Edge scene classifier v0.2.0 promotion demo
+- [x] Heavy VLM rejection demo
+- [x] Scratch edge classifier rejection demo
+- [x] Public-dataset pretrained edge classifier v0.3.0 promotion demo
 - [ ] W&B model registry with aliases: `candidate`, `staging`, `production`
-- [ ] Public-dataset edge classifier v0.3.0 baseline
 - [ ] ONNX export and latency comparison
+- [ ] Quantized edge-runtime comparison
 - [ ] SQLite registry backend for local production simulation
 - [ ] Real SmolVLM2 LoRA fine-tuning on RTX 5080
 - [ ] FastAPI vendor model intake API

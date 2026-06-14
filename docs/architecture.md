@@ -9,6 +9,8 @@ It separates:
 - vendor submission from production readiness
 - cloud-simulation validation from strict edge-target validation
 
+![model-port architecture](assets/model-port-architecture.svg)
+
 ## Lifecycle
 
 The lifecycle starts with a submitted model and ends with a governed promotion

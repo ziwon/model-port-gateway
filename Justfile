@@ -182,6 +182,14 @@ promote-v030:
 promote-production-v030:
     curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/vendor-demo.edge-object-classifier.0.3.0/promote -H 'Content-Type: application/json' -d '{"target_stage":"production"}'
 
+sync-wandb-v030:
+    docker compose up -d --build wandb trainer
+    docker compose exec trainer python -m model_port.registry.sync_wandb_alias --model-id vendor-demo.edge-object-classifier.0.3.0 --stage staging
+
+sync-wandb-production-v030:
+    docker compose up -d --build wandb trainer
+    docker compose exec trainer python -m model_port.registry.sync_wandb_alias --model-id vendor-demo.edge-object-classifier.0.3.0 --stage production
+
 local-mlops:
     docker compose up -d --build wandb api trainer
     docker compose exec trainer python scripts/prepare_sample_dataset.py --output data/sample_captions.jsonl --num-samples 32

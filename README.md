@@ -426,6 +426,21 @@ just register-v030
 just register-production-v030
 ```
 
+After API promotion, sync W&B Registry aliases from the local model-port
+registry stage:
+
+```bash
+just promote-v030
+just sync-wandb-v030
+
+just promote-production-v030
+just sync-wandb-production-v030
+```
+
+The sync command treats the API registry as the source of truth. If the local
+record is `staging`, W&B receives `candidate`, `staging`, and `v0.3.0`. If the
+record is `production`, W&B receives `staging`, `production`, and `v0.3.0`.
+
 The registration script links versions into the W&B Registry target path
 `wandb-registry-Model/<collection>` by default, so the entries appear under the
 **Model** registry card as collections such as `smart-captioner` and
@@ -566,6 +581,7 @@ runtime comparison is the next implementation step after this baseline.
 - [x] Scratch edge classifier rejection demo
 - [x] Public-dataset pretrained edge classifier v0.3.0 promotion demo
 - [x] W&B model registry with aliases: `candidate`, `staging`, `production`
+- [x] W&B alias sync from API registry stage
 - [x] ONNX export and latency comparison
 - [ ] Quantized edge-runtime comparison
 - [ ] SQLite registry backend for local production simulation

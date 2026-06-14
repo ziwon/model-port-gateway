@@ -35,5 +35,14 @@ def artifact_aliases(version: str, report: dict[str, Any] | None) -> list[str]:
     return aliases
 
 
+def lifecycle_aliases(version: str, stage: str, report: dict[str, Any] | None = None) -> list[str]:
+    version_alias = f"v{version}"
+    if stage == "staging":
+        return ["candidate", "staging", version_alias]
+    if stage == "production":
+        return ["staging", "production", version_alias]
+    return artifact_aliases(version, report)
+
+
 def _is_latency_rejection(reject_reason: Any) -> bool:
     return str(reject_reason or "") == "p95_latency_ms_exceeded"

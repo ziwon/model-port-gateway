@@ -5,6 +5,7 @@ from model_port.registry.build_manifest import build_manifest
 from model_port.registry.store import JsonModelRegistry, ModelRegistration
 from model_port.registry.wandb_utils import (
     artifact_aliases,
+    lifecycle_aliases,
     wandb_project,
     wandb_registry_target_path,
 )
@@ -104,6 +105,11 @@ def test_wandb_aliases_mark_staging_candidate():
     )
 
     assert aliases == ["candidate", "staging", "v0.3.0"]
+
+
+def test_wandb_lifecycle_aliases_follow_registry_stage():
+    assert lifecycle_aliases("0.3.0", "staging") == ["candidate", "staging", "v0.3.0"]
+    assert lifecycle_aliases("0.3.0", "production") == ["staging", "production", "v0.3.0"]
 
 
 def test_build_manifest_blocks_failed_quality_gate():

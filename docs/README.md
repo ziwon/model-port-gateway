@@ -289,5 +289,10 @@ sequenceDiagram
 Vendors cannot self-declare a model as passed. Promotion eligibility is derived
 from the evaluated manifest, specifically `evaluation.passed`.
 
+Stage transitions are constrained to `candidate -> staging -> production`.
+Candidates cannot skip directly to production, and production is treated as a
+terminal stage. Rollback should be represented as a new candidate or a separate
+future rollback workflow, not as an unrestricted stage mutation.
+
 Failed candidates remain in the registry with rejection metadata. This preserves
 vendor lineage, evaluation evidence, and promotion history for auditability.

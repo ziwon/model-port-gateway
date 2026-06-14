@@ -280,6 +280,121 @@ def test_registry_promotes_passed_quality_gate(tmp_path):
     }
 
 
+def test_registry_blocks_candidate_to_production_direct_promotion(tmp_path):
+    manifest = build_manifest(
+        load_yaml("configs/model_manifest.example.yaml"),
+        {
+            "model_name": "smart-captioner",
+            "version": "0.1.3",
+            "vendor": "vendor-demo",
+            "metrics": {
+                "p95_latency_ms": 1800.0,
+                "failure_rate": 0.0,
+                "drift_score": 0.0388,
+            },
+            "quality_gate": {
+                "profile": "cloud-sim",
+                "max_p95_latency_ms": 3000.0,
+                "max_failure_rate": 0.01,
+                "max_drift_score": 0.2,
+                "passed": True,
+                "reject_reason": None,
+            },
+        },
+    )
+    manifest_path = tmp_path / "manifest.yaml"
+    dump_yaml(manifest, manifest_path)
+
+    registry = JsonModelRegistry(tmp_path / "registry" / "models.json")
+    registry.register(
+        ModelRegistration(
+            vendor="vendor-demo",
+            model_name="smart-captioner",
+            version="0.1.3",
+            manifest_path=str(manifest_path),
+            stage="candidate",
+        )
+    )
+
+    promote_resp = registry.promote(
+        "vendor-demo.smart-captioner.0.1.3",
+        "production",
+    )
+
+    assert promote_resp == {
+        "status": "blocked",
+        "reason": "invalid_stage_transition",
+        "details": {
+            "model": "vendor-demo.smart-captioner.0.1.3",
+            "from_stage": "candidate",
+            "target_stage": "production",
+            "allowed_targets": ["staging"],
+        },
+    }
+
+
+def test_registry_allows_staging_to_production_promotion(tmp_path):
+    manifest = build_manifest(
+        load_yaml("configs/model_manifest.example.yaml"),
+        {
+            "model_name": "smart-captioner",
+            "version": "0.1.4",
+            "vendor": "vendor-demo",
+            "metrics": {
+                "p95_latency_ms": 1800.0,
+                "failure_rate": 0.0,
+                "drift_score": 0.0388,
+            },
+            "quality_gate": {
+                "profile": "cloud-sim",
+                "max_p95_latency_ms": 3000.0,
+                "max_failure_rate": 0.01,
+                "max_drift_score": 0.2,
+                "passed": True,
+                "reject_reason": None,
+            },
+        },
+    )
+    manifest_path = tmp_path / "manifest.yaml"
+    dump_yaml(manifest, manifest_path)
+
+    registry = JsonModelRegistry(tmp_path / "registry" / "models.json")
+    registry.register(
+        ModelRegistration(
+            vendor="vendor-demo",
+            model_name="smart-captioner",
+            version="0.1.4",
+            manifest_path=str(manifest_path),
+            stage="candidate",
+        )
+    )
+    registry.promote("vendor-demo.smart-captioner.0.1.4", "staging")
+
+    promote_resp = registry.promote(
+        "vendor-demo.smart-captioner.0.1.4",
+        "production",
+    )
+
+    assert promote_resp == {
+        "status": "promoted",
+        "from_stage": "staging",
+        "to_stage": "production",
+        "model": "vendor-demo.smart-captioner.0.1.4",
+    }
+
+
+def test_api_rejects_invalid_promotion_target_stage():
+    pytest.importorskip("fastapi")
+    from pydantic import ValidationError
+
+    from model_port.api.main import PromotionRequest
+
+    with pytest.raises(ValidationError) as exc:
+        PromotionRequest(target_stage="candidate")
+
+    assert "target_stage" in str(exc.value)
+
+
 def test_registry_derives_quality_gate_from_manifest_only(tmp_path):
     manifest = build_manifest(
         load_yaml("configs/model_manifest.example.yaml"),

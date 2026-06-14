@@ -7,6 +7,13 @@ from typing import Any
 
 from model_port.common.config import load_yaml
 
+ALLOWED_PROMOTION_TARGETS = {"staging", "production"}
+ALLOWED_STAGE_TRANSITIONS = {
+    "candidate": {"staging"},
+    "staging": {"production"},
+    "production": set(),
+}
+
 
 @dataclass(frozen=True)
 class ModelRegistration:
@@ -48,6 +55,23 @@ class JsonModelRegistry:
         if not record:
             return None
 
+        from_stage = str(record.get("stage", "candidate"))
+        if target_stage not in ALLOWED_PROMOTION_TARGETS:
+            return invalid_transition_response(
+                model_id_value,
+                from_stage,
+                target_stage,
+                "invalid_target_stage",
+            )
+
+        if target_stage not in ALLOWED_STAGE_TRANSITIONS.get(from_stage, set()):
+            return invalid_transition_response(
+                model_id_value,
+                from_stage,
+                target_stage,
+                "invalid_stage_transition",
+            )
+
         if not record.get("quality_gate_passed", False):
             return {
                 "status": "blocked",
@@ -55,7 +79,6 @@ class JsonModelRegistry:
                 "details": promotion_block_details(record),
             }
 
-        from_stage = str(record.get("stage", "candidate"))
         record["stage"] = target_stage
         registry[model_id_value] = record
         self.save(registry)
@@ -120,4 +143,22 @@ def promotion_block_details(record: dict[str, Any]) -> dict[str, Any]:
         "failure_rate": evaluation.get("failure_rate"),
         "max_failure_rate": evaluation.get("max_failure_rate"),
         "reject_reason": evaluation.get("reject_reason"),
+    }
+
+
+def invalid_transition_response(
+    model_id_value: str,
+    from_stage: str,
+    target_stage: str,
+    reason: str,
+) -> dict[str, Any]:
+    return {
+        "status": "blocked",
+        "reason": reason,
+        "details": {
+            "model": model_id_value,
+            "from_stage": from_stage,
+            "target_stage": target_stage,
+            "allowed_targets": sorted(ALLOWED_STAGE_TRANSITIONS.get(from_stage, set())),
+        },
     }

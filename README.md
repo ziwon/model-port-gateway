@@ -223,6 +223,11 @@ from `evaluation.passed` in the evaluated manifest. The current local registry
 uses JSON for transparency; production backends should use PostgreSQL, SQLite
 with locking, or object storage with versioned writes.
 
+Promotion follows a strict lifecycle: `candidate -> staging -> production`.
+Direct `candidate -> production` promotion is blocked, and production is treated
+as a terminal stage. This keeps lifecycle governance separate from vendor input
+and makes every stage transition explicit.
+
 ## Model Promotion Demo
 
 model-port does not blindly promote every model. Heavy VLMs can pass local

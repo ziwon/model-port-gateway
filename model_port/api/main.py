@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
@@ -25,11 +25,11 @@ class ModelRegistration(BaseModel):
     model_name: str
     version: str
     manifest_path: str
-    stage: str = "candidate"
+    stage: Literal["candidate"] = "candidate"
 
 
 class PromotionRequest(BaseModel):
-    target_stage: str = Field(..., min_length=1)
+    target_stage: Literal["staging", "production"] = Field(...)
 
 
 @app.get("/healthz")

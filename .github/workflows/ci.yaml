@@ -20,7 +20,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Build API image
         run: docker build --target api -f docker/Dockerfile -t model-port-api:ci .
@@ -91,19 +91,19 @@ jobs:
             model-port-trainer:ci
 
       - name: Upload API Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: security-reports/trivy-api.sarif
           category: trivy-api
 
       - name: Upload trainer Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: security-reports/trivy-trainer.sarif
           category: trivy-trainer
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: security-reports
           path: security-reports/

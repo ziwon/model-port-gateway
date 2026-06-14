@@ -34,9 +34,17 @@ trainer-gpu:
     docker compose up -d --build trainer
     docker compose exec trainer nvidia-smi
 
+trainer-cuda-gpu:
+    docker compose --profile cuda up -d --build trainer-cuda
+    docker compose exec trainer-cuda nvidia-smi
+
 trainer-deps:
     docker compose up -d --build trainer
     docker compose exec trainer python -c "import torchvision, num2words; print('trainer deps ok')"
+
+trainer-cuda-deps:
+    docker compose --profile cuda up -d --build trainer-cuda
+    docker compose exec trainer-cuda python -c "import onnxruntime as ort; print('onnxruntime providers:', ort.get_available_providers())"
 
 prepare-data:
     docker compose up -d --build trainer
@@ -85,6 +93,26 @@ evaluate-v020:
 evaluate-v030:
     docker compose up -d --build wandb trainer
     docker compose exec trainer python -m model_port.pipelines.evaluate_classifier --config configs/train.edge_classifier.v0.3.0.yaml --model-dir artifacts/models/edge-object-classifier-v0.3.0 --dataset data/cifar10_subset.jsonl --output artifacts/eval/eval_report-v0.3.0.json --version 0.3.0
+
+export-onnx-v030:
+    docker compose up -d --build trainer
+    docker compose exec trainer python -m model_port.pipelines.export_classifier_onnx --config configs/train.edge_classifier.v0.3.0.yaml --model-dir artifacts/models/edge-object-classifier-v0.3.0 --output artifacts/onnx/edge-object-classifier-v0.3.0/model.onnx
+
+evaluate-onnx-cpu-v030:
+    docker compose up -d --build wandb trainer
+    docker compose exec trainer python -m model_port.pipelines.evaluate_classifier_onnx --config configs/train.edge_classifier.v0.3.0.yaml --onnx-path artifacts/onnx/edge-object-classifier-v0.3.0/model.onnx --dataset data/cifar10_subset.jsonl --output artifacts/eval/eval_report-v0.3.0-onnx-cpu.json --runtime cpu --version 0.3.0
+
+evaluate-onnx-cuda-v030:
+    docker compose --profile cuda up -d --build wandb trainer-cuda
+    docker compose exec trainer-cuda python -m model_port.pipelines.evaluate_classifier_onnx --config configs/train.edge_classifier.v0.3.0.yaml --onnx-path artifacts/onnx/edge-object-classifier-v0.3.0/model.onnx --dataset data/cifar10_subset.jsonl --output artifacts/eval/eval_report-v0.3.0-onnx-cuda.json --runtime cuda --version 0.3.0
+
+compare-runtime-v030:
+    docker compose up -d --build trainer
+    docker compose exec trainer python -m model_port.pipelines.compare_runtime_reports artifacts/eval/eval_report-v0.3.0.json artifacts/eval/eval_report-v0.3.0-onnx-cpu.json --output artifacts/eval/runtime_comparison-v0.3.0.md
+
+compare-runtime-cuda-v030:
+    docker compose --profile cuda up -d --build trainer-cuda
+    docker compose exec trainer-cuda python -m model_port.pipelines.compare_runtime_reports artifacts/eval/eval_report-v0.3.0.json artifacts/eval/eval_report-v0.3.0-onnx-cpu.json artifacts/eval/eval_report-v0.3.0-onnx-cuda.json --output artifacts/eval/runtime_comparison-v0.3.0.md
 
 build-manifest:
     docker compose up -d --build trainer

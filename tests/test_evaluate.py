@@ -1,4 +1,5 @@
 from model_port.pipelines.eval_wandb import quality_gate_table_rows, wandb_summary
+from model_port.pipelines.runtime_compare import markdown_table
 
 
 def test_wandb_summary_promotes_eval_metrics():
@@ -90,6 +91,32 @@ def test_quality_gate_table_rows_include_classifier_gates():
         "passed": True,
         "profile": "edge-target",
     }
+
+
+def test_runtime_comparison_markdown_table():
+    table = markdown_table([
+        {
+            "runtime": "PyTorch eager",
+            "accuracy": 0.76,
+            "p95_latency_ms": 5.7473,
+            "model_size_mb": 5.9484,
+            "gate": "passed",
+        },
+        {
+            "runtime": "ONNX Runtime CPU",
+            "accuracy": None,
+            "p95_latency_ms": None,
+            "model_size_mb": None,
+            "gate": "TBD",
+        },
+    ])
+
+    assert table == "\n".join([
+        "| Runtime | Accuracy | p95 Latency | Size | Gate |",
+        "|---|---:|---:|---:|---|",
+        "| PyTorch eager | 0.7600 | 5.7473 ms | 5.9484 MB | passed |",
+        "| ONNX Runtime CPU | TBD | TBD ms | TBD MB | TBD |",
+    ])
 
 
 def _sample_report():

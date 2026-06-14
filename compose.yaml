@@ -49,6 +49,37 @@ services:
               count: 1
               capabilities: [gpu]
 
+  trainer-cuda:
+    profiles: ["cuda"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: trainer-cuda
+    command: sleep infinity
+    environment:
+      MODEL_PORT_ENV: local
+      WANDB_BASE_URL: http://wandb:8080
+      WANDB_API_KEY: ${WANDB_API_KEY:-}
+      WANDB_PROJECT: model-port
+      WANDB_MODE: ${WANDB_MODE:-offline}
+      HF_HOME: /cache/huggingface
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    volumes:
+      - .:/app
+      - hf-cache:/cache/huggingface
+      - model-artifacts:/app/artifacts
+    depends_on:
+      wandb:
+        condition: service_started
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
   wandb:
     image: wandb/local:latest
     ports:

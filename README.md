@@ -1,6 +1,6 @@
-# model-port
+# model-port-gateway
 
-[![CI](https://github.com/ziwon/model-port/actions/workflows/ci.yaml/badge.svg)](https://github.com/ziwon/model-port/actions/workflows/ci.yaml)
+[![CI](https://github.com/ziwon/model-port-gateway/actions/workflows/ci.yaml/badge.svg)](https://github.com/ziwon/model-port-gateway/actions/workflows/ci.yaml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![FastAPI](https://img.shields.io/badge/api-FastAPI-009688)
 ![Docker Compose](https://img.shields.io/badge/runtime-Docker%20Compose-2496ED)
@@ -10,9 +10,14 @@ A lightweight ModelOps gateway for multi-vendor AI model intake, fine-tuning, va
 
 ![](./docs/assets/bg-wide.png)
 
-This scaffold is designed for a single RTX 5080 16GB workstation first, then can be extended to Kubernetes.
+`model-port-gateway` is the repository for the local-first gateway. The Python
+package and import path remain `model_port`, so CLI commands continue to use
+`python -m model_port...`.
 
-## Default demo track
+model-port is a single-machine ModelOps reference implementation for an RTX 5080
+16GB workstation first, with a path toward k3s and Kubernetes deployment.
+
+## Reference Workflow
 
 - **Task**: small vision-language fine-tuning for edge/smart-glasses style image understanding
 - **Base model**: `HuggingFaceTB/SmolVLM2-500M-Video-Instruct` by default; switch to `HuggingFaceTB/SmolVLM2-2.2B-Instruct` when memory allows
@@ -34,26 +39,6 @@ It separates:
 - cloud-simulation validation from strict edge-target validation
 
 ![model-port architecture](docs/assets/model-port-architecture.svg)
-
-<details>
-<summary>Mermaid source</summary>
-
-```mermaid
-flowchart LR
-  A["Vendor Model Submission"] --> B["Fine-tuning Pipeline<br/>LoRA / QLoRA"]
-  B --> C["W&B Tracking<br/>runs / tables / artifacts"]
-  C --> D["Evaluation + Drift Report"]
-  D --> E["Model Manifest"]
-  E --> F["model-port API<br/>register / promote"]
-  F --> G{"Quality Gate"}
-  G -->|passed| H["Promote to Staging"]
-  G -->|failed| I["Block Promotion<br/>keep rejection metadata"]
-  H --> J["Canary Rollout<br/>future"]
-  J --> K["Device Telemetry<br/>future"]
-  K --> G
-```
-
-</details>
 
 ## Quickstart
 
@@ -108,9 +93,10 @@ MODEL_PORT_API_PORT=28080 WANDB_PORT=18081 just compose-up
 
 Stop the stack with `just compose-down`.
 
-Infrastructure notes live in [infra/](infra/README.md). For the MVP, the root
-`compose.yaml` is intentionally the source of truth. The `infra/k8s/` directory
-is reserved for the later k3s phase after the Compose lifecycle is stable.
+Infrastructure notes live in [infra/](infra/README.md). For the current
+local-first track, the root `compose.yaml` is intentionally the source of truth.
+The `infra/k8s/` directory is reserved for the later k3s phase after the Compose
+lifecycle is stable.
 
 ### Local MLOps Flow
 
@@ -233,8 +219,8 @@ metadata instead of deleting them. This preserves vendor lineage, evaluation
 evidence, and promotion history for auditability.
 
 Vendors cannot self-declare a model as passed. Promotion eligibility is derived
-from `evaluation.passed` in the evaluated manifest. The MVP uses a local JSON
-registry for transparency; production backends should use PostgreSQL, SQLite
+from `evaluation.passed` in the evaluated manifest. The current local registry
+uses JSON for transparency; production backends should use PostgreSQL, SQLite
 with locking, or object storage with versioned writes.
 
 ## Model Promotion Demo
@@ -334,13 +320,14 @@ Promotion result:
 }
 ```
 
-W&B training evidence:
+W&B training comparison:
 
-![v0.2.0 W&B training stability](docs/assets/wandb-train-v020-stability.png)
+![v0.2.x and v0.3.0 W&B accuracy and loss comparison](docs/assets/wandb-train-v030-accuracy-loss.png)
 
-The `train/epoch_loss` and `train/accuracy` panels show that the scratch
-MobileNetV3-Small run trains, but the later evaluation still blocks promotion
-because edge readiness requires accuracy and drift gates, not only low latency.
+The `train/epoch_loss` and `train/accuracy` panels compare the scratch
+MobileNetV3-Small attempt with the pretrained v0.3.0 run. The scratch model can
+train and remain fast, but the pretrained backbone reaches the accuracy needed
+for the later edge-target promotion gate.
 
 ### Demo 3: Pretrained Edge Classifier Promoted
 
@@ -521,7 +508,7 @@ Next scope:
 - Add a rollout simulation that assigns a canary percentage and records rollback
   metadata after staging promotion.
 - Move registry persistence from local JSON toward SQLite as the bridge between
-  the Compose MVP and the later k3s/Helm deployment.
+  the Compose-based local runtime and the later k3s/Helm deployment.
 
 Current demo outcome:
 

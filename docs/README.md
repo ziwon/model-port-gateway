@@ -35,11 +35,11 @@ flowchart LR
 
 ## Detailed View
 
-The detailed view expands the local MVP into the components that own each part
-of the model lifecycle. The current implementation runs on Docker Compose, but
-the boundaries are intentionally close to the future k3s or Kubernetes shape:
-trainer, tracking, registry gateway, policy, and rollout remain separate
-concerns.
+The detailed view expands the local-first implementation into the components
+that own each part of the model lifecycle. The current runtime uses Docker
+Compose, but the boundaries are intentionally close to the future k3s or
+Kubernetes shape: trainer, tracking, registry gateway, policy, and rollout
+remain separate concerns.
 
 ```mermaid
 flowchart LR
@@ -50,7 +50,7 @@ flowchart LR
   end
 
   subgraph Dev["Developer Workstation<br/>RTX 5080 16GB"]
-    REPO["GitHub Repo<br/>model-port"]
+    REPO["GitHub Repo<br/>model-port-gateway"]
     JUST["Justfile / CLI<br/>local-mlops flow"]
     COMPOSE["Docker Compose<br/>api + trainer + wandb"]
   end
@@ -71,7 +71,7 @@ flowchart LR
 
   subgraph Gateway["model-port API Gateway"]
     API["FastAPI<br/>/models/register<br/>/models/{id}/promote"]
-    STORE["Local Registry Store<br/>models.json MVP"]
+    STORE["Local Registry Store<br/>models.json"]
     GATE["Promotion Gate<br/>quality policy check"]
     MANIFEST["Model Manifest<br/>evaluation + deployment metadata"]
   end
@@ -121,9 +121,9 @@ The vendor boundary represents external vendors or internal model teams. They
 provide a model, dataset reference, and submission manifest, but they do not
 control promotion status.
 
-The developer workstation boundary is the MVP runtime. `Justfile` commands and
-Docker Compose wire together the API, trainer, and W&B services so the full
-pipeline can be exercised on one machine before moving to k3s.
+The developer workstation boundary is the local reference runtime. `Justfile`
+commands and Docker Compose wire together the API, trainer, and W&B services so
+the full pipeline can be exercised on one machine before moving to k3s.
 
 The trainer service owns data preparation, LoRA or QLoRA fine-tuning, and
 evaluation execution. It produces artifacts and reports, but avoids making
@@ -131,8 +131,8 @@ rollout decisions directly.
 
 W&B is the default experiment and artifact system. It stores training runs,
 evaluation tables, model artifacts, lifecycle aliases, and rejection metadata so
-both blocked and promoted candidates remain auditable. The MVP uses aliases such
-as `candidate`, `staging`, `production`, `rejected-latency`, and
+both blocked and promoted candidates remain auditable. The local registry flow
+uses aliases such as `candidate`, `staging`, `production`, `rejected-latency`, and
 `rejected-quality`.
 
 The model-port API gateway owns registration and promotion control. It reads
@@ -144,9 +144,9 @@ For example, `cloud-sim` can validate that the pipeline and model behavior are
 reasonable, while `edge-target` can block candidates that are too slow or too
 large for deployment.
 
-The rollout layer is future-facing in the MVP. It sketches where canary rollout,
-stable rollout, runtime telemetry, and feedback into later quality decisions
-will live.
+The rollout layer is future-facing in the current local runtime. It sketches
+where canary rollout, stable rollout, runtime telemetry, and feedback into later
+quality decisions will live.
 
 ## Runtime Sequence
 
@@ -196,7 +196,8 @@ sequenceDiagram
 5. The quality gate applies a named profile such as `cloud-sim` or
    `edge-target`. A passing result can move to staging; a failing result blocks
    promotion and preserves rejection metadata.
-6. The rollout controller is intentionally future-facing in the MVP. It
+6. The rollout controller is intentionally future-facing in the local reference
+   runtime. It
    represents the next layer for canary rollout, runtime telemetry, and feedback
    into later quality gate decisions.
 

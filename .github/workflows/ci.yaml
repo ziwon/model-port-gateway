@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -16,3 +20,82 @@ jobs:
       - run: pip install -e .[dev,api]
       - run: ruff check .
       - run: pytest -q
+
+  container-security:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build --target api -f docker/Dockerfile -t model-port-api:ci .
+
+      - name: Build trainer image
+        run: docker build --target trainer -f docker/Dockerfile -t model-port-trainer:ci .
+
+      - name: Prepare security report directory
+        run: mkdir -p security-reports
+
+      - name: Generate API SBOM
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/security-reports:/out" \
+            anchore/syft:v1.45.1 \
+            model-port-api:ci \
+            -o spdx-json=/out/model-port-api.spdx.json
+
+      - name: Generate trainer SBOM
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/security-reports:/out" \
+            anchore/syft:v1.45.1 \
+            model-port-trainer:ci \
+            -o spdx-json=/out/model-port-trainer.spdx.json
+
+      - name: Scan API image with Trivy
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/security-reports:/out" \
+            aquasec/trivy:0.69.3 \
+            image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 0 \
+            --format sarif \
+            --output /out/trivy-api.sarif \
+            model-port-api:ci
+
+      - name: Scan trainer image with Trivy
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/security-reports:/out" \
+            aquasec/trivy:0.69.3 \
+            image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 0 \
+            --format sarif \
+            --output /out/trivy-trainer.sarif \
+            model-port-trainer:ci
+
+      - name: Upload API Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: security-reports/trivy-api.sarif
+          category: trivy-api
+
+      - name: Upload trainer Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: security-reports/trivy-trainer.sarif
+          category: trivy-trainer
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: security-reports/

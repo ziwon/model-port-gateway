@@ -587,6 +587,17 @@ block a weak scratch model and promote an improved transfer-learning candidate.
 The ONNX CPU and CUDA runtime comparison is now part of the demo; quantized
 runtime comparison is the next implementation step after this baseline.
 
+## CI and Security
+
+GitHub Actions runs lint and tests first, then builds the API and trainer Docker
+targets. The container security job generates Syft SBOM artifacts and Trivy SARIF
+reports for both images. Trivy currently uploads findings without failing the
+workflow so vulnerabilities are visible during review while the demo remains
+portable across base-image updates.
+
+Dependabot is enabled for GitHub Actions and Python dependencies so CI tooling
+and package updates are surfaced as regular maintenance PRs.
+
 ## Roadmap
 
 - [x] W&B Tables for eval examples and output drift
@@ -602,4 +613,4 @@ runtime comparison is the next implementation step after this baseline.
 - [ ] FastAPI vendor model intake API
 - [ ] Canary rollout controller
 - [ ] Prometheus/Grafana device telemetry
-- [ ] CI: lint, test, Docker build, Trivy scan, SBOM
+- [x] CI: lint, test, Docker build, Trivy scan, SBOM

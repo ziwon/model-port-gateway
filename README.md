@@ -233,10 +233,26 @@ with locking, or object storage with versioned writes.
 
 ## Model Promotion Demo
 
-### v0.1.0: Rejected
+model-port does not blindly promote every model. Heavy VLMs can pass local
+cloud-simulation validation but still fail a strict edge-target gate, while a
+small edge-friendly model can pass the same promotion policy and move to
+staging.
 
-The first candidate completed evaluation but failed the strict edge target
-latency gate.
+### Demo 1: VLM Candidate Rejected
+
+`smart-captioner` v0.1.0 is a SmolVLM2 captioning candidate. It completes the
+training and evaluation path, but the strict `edge-target` profile blocks
+promotion because autoregressive VLM generation is too slow for the 100ms p95
+edge latency target.
+
+| Field | Value |
+|---|---|
+| Model | `smart-captioner` |
+| Version | `0.1.0` |
+| Type | VLM captioner |
+| Gate | `edge-target` |
+| Result | promotion blocked |
+| Reason | `p95_latency_ms_exceeded` |
 
 | Metric | Value | Gate | Result |
 |---|---:|---:|---|
@@ -256,10 +272,54 @@ Promotion result:
 }
 ```
 
-### v0.1.1: Optimized Candidate
+### Demo 2: Edge Classifier Promoted
+
+`edge-scene-classifier` v0.2.0 is the edge-friendly success case. Instead of
+forcing a VLM into an edge target, this candidate uses a small MobileNetV3-Small
+scene classifier. The run shows that model-port can reject an unsuitable model
+and promote a better deployment fit through the same registry and quality gate
+path.
+
+| Field | Value |
+|---|---|
+| Model | `edge-scene-classifier` |
+| Version | `0.2.0` |
+| Type | MobileNetV3-Small scene classifier |
+| Gate | `edge-target` |
+| Result | promoted to staging |
+| Reason | accuracy, latency, failure rate, drift, and model size passed |
+
+| Metric | Value | Gate | Result |
+|---|---:|---:|---|
+| accuracy | 1.0 | 0.8 minimum | Passed |
+| p95 latency | 6.35 ms | 100 ms | Passed |
+| failure rate | 0.0 | 0.01 | Passed |
+| drift score | 0.0 | 0.2 | Passed |
+| model size | 5.86 MB | 100 MB | Passed |
+
+Promotion result:
+
+```json
+{
+  "status": "promoted",
+  "from_stage": "candidate",
+  "to_stage": "staging",
+  "model": "vendor-demo.edge-scene-classifier.0.2.0"
+}
+```
+
+W&B training evidence:
+
+![v0.2.0 W&B training stability](docs/assets/wandb-train-v020-stability.png)
+
+The `train/epoch_loss` and `train/accuracy` panels show the stabilized
+MobileNetV3-Small run converging on the synthetic edge-classification dataset.
+
+### v0.1.1: Cloud-Sim Optimization
 
 The second candidate reduces autoregressive generation length via the
-`inference` config and evaluates against the cloud simulation gate:
+`inference` config and evaluates against the `cloud-sim` gate. This is useful as
+an optimization experiment, but it is not the final edge success case.
 
 ```yaml
 inference:
@@ -313,24 +373,48 @@ curl -X POST http://127.0.0.1:18080/models/vendor-demo.smart-captioner.0.1.1/pro
   -d '{"target_stage":"staging"}'
 ```
 
-Expected promotion result:
+## v0.3.0 Roadmap
 
-```json
-{
-  "status": "promoted",
-  "from_stage": "candidate",
-  "to_stage": "staging",
-  "model": "vendor-demo.smart-captioner.0.1.1"
-}
+v0.2.0 validates the model-port lifecycle with a synthetic edge-classification
+dataset. v0.3.0 should keep the same promotion contract but replace the
+synthetic success case with a more realistic edge deployment candidate.
+
+Planned scope:
+
+- Replace or augment the synthetic scene dataset with a small public image
+  classification subset, such as CIFAR-10, Places-style scenes, or a curated
+  edge-camera sample.
+- Add a deterministic dataset split file so train/eval results are reproducible
+  across machines and W&B runs.
+- Export the promoted classifier to ONNX, then evaluate both PyTorch and ONNX
+  latency under the same `edge-target` quality gate.
+- Add quantization-aware or post-training quantization experiments and compare
+  `model_size_mb`, `p95_latency_ms`, and accuracy drop.
+- Extend the manifest with runtime targets, for example `torchvision`, `onnx`,
+  and future `tflite`.
+- Add a simple rollout simulation that promotes v0.3.0 to `staging`, assigns a
+  canary percentage, and records rollback metadata.
+- Move registry persistence from local JSON toward SQLite as the bridge between
+  the Compose MVP and the later k3s/Helm deployment.
+
+Expected v0.3.0 demo outcome:
+
+```text
+v0.1.0: VLM candidate rejected by edge-target latency
+v0.2.0: synthetic edge classifier promoted to staging
+v0.3.0: public-dataset edge classifier exported and promoted with runtime evidence
 ```
 
 ## Roadmap
 
-- [ ] Real SmolVLM2 LoRA fine-tuning on RTX 5080
-- [ ] W&B Tables for eval examples and output drift
+- [x] W&B Tables for eval examples and output drift
+- [x] Edge scene classifier v0.2.0 promotion demo
 - [ ] W&B model registry with aliases: `candidate`, `staging`, `production`
+- [ ] Public-dataset edge classifier v0.3.0
+- [ ] ONNX export and latency comparison
+- [ ] SQLite registry backend for local production simulation
+- [ ] Real SmolVLM2 LoRA fine-tuning on RTX 5080
 - [ ] FastAPI vendor model intake API
-- [ ] ONNX/TFLite export placeholder
 - [ ] Canary rollout controller
 - [ ] Prometheus/Grafana device telemetry
 - [ ] CI: lint, test, Docker build, Trivy scan, SBOM

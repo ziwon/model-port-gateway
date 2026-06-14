@@ -100,16 +100,33 @@ def _dataset_class(deps: dict[str, Any]) -> type[Any]:
     return SceneDataset
 
 
-def _make_model(deps: dict[str, Any], num_classes: int) -> Any:
+def _make_model(
+    deps: dict[str, Any],
+    num_classes: int,
+    pretrained: bool = False,
+    freeze_backbone: bool = False,
+) -> Any:
     models = deps["models"]
     torch = deps.get("torch")
+    weights = None
+    if pretrained:
+        weights = models.MobileNet_V3_Small_Weights.DEFAULT
+    if pretrained or torch is None:
+        model = models.mobilenet_v3_small(weights=weights)
+    else:
+        model = models.mobilenet_v3_small(
+            weights=weights,
+            norm_layer=lambda channels: torch.nn.GroupNorm(1, channels),
+        )
+    in_features = model.classifier[-1].in_features
     if torch is None:
-        return models.mobilenet_v3_small(weights=None, num_classes=num_classes)
-    return models.mobilenet_v3_small(
-        weights=None,
-        num_classes=num_classes,
-        norm_layer=lambda channels: torch.nn.GroupNorm(1, channels),
-    )
+        model.classifier[-1] = model.classifier[-1].__class__(in_features, num_classes)
+    else:
+        model.classifier[-1] = torch.nn.Linear(in_features, num_classes)
+    if freeze_backbone:
+        for parameter in model.features.parameters():
+            parameter.requires_grad = False
+    return model
 
 
 def _split_rows(rows: list[dict[str, Any]], train_ratio: float) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -164,8 +181,16 @@ def main(
     train_dataset = SceneDataset(train_rows, dataset_dir, label_to_id, _transforms(deps, image_size))
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = _make_model(deps, len(classes)).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=float(cfg.training.learning_rate))
+    model = _make_model(
+        deps,
+        len(classes),
+        pretrained=bool(cfg.training.get("pretrained", False)),
+        freeze_backbone=bool(cfg.training.get("freeze_backbone", False)),
+    ).to(device)
+    optimizer = torch.optim.AdamW(
+        (parameter for parameter in model.parameters() if parameter.requires_grad),
+        lr=float(cfg.training.learning_rate),
+    )
     criterion = torch.nn.CrossEntropyLoss()
 
     wandb_run = None

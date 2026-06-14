@@ -83,7 +83,12 @@ def _load_model(cfg: Any, model_dir: Path, classes: list[str], deps: dict[str, A
     weights_path = model_dir / "model.pt"
     if not weights_path.exists():
         raise typer.BadParameter(f"Missing classifier weights: {weights_path}")
-    model = _make_model({"models": models, "torch": torch}, len(classes))
+    model = _make_model(
+        {"models": models, "torch": torch},
+        len(classes),
+        pretrained=bool(cfg.training.get("pretrained", False)),
+        freeze_backbone=bool(cfg.training.get("freeze_backbone", False)),
+    )
     state = torch.load(weights_path, map_location="cpu")
     model.load_state_dict(state)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

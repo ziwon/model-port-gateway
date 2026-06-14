@@ -405,12 +405,30 @@ v0.2.0: synthetic edge classifier promoted to staging
 v0.3.0: public-dataset edge classifier exported and promoted with runtime evidence
 ```
 
+Initial v0.3.0 preparation uses a balanced CIFAR-10 subset exported into the
+same JSONL + local image contract as v0.2.0:
+
+```bash
+just prepare-cifar10-data
+just train-v030
+just evaluate-v030
+just build-manifest-v030
+just register-v030
+just api-register-v030
+just promote-v030
+```
+
+The first v0.3.0 target is not a production-grade CIFAR-10 benchmark. It is a
+public-dataset promotion experiment that proves the same gateway lifecycle works
+after replacing the synthetic v0.2.0 data source. ONNX export and quantized
+runtime comparison are the next implementation steps after this baseline passes.
+
 ## Roadmap
 
 - [x] W&B Tables for eval examples and output drift
 - [x] Edge scene classifier v0.2.0 promotion demo
 - [ ] W&B model registry with aliases: `candidate`, `staging`, `production`
-- [ ] Public-dataset edge classifier v0.3.0
+- [ ] Public-dataset edge classifier v0.3.0 baseline
 - [ ] ONNX export and latency comparison
 - [ ] SQLite registry backend for local production simulation
 - [ ] Real SmolVLM2 LoRA fine-tuning on RTX 5080

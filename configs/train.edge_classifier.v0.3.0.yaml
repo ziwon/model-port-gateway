@@ -1,0 +1,59 @@
+project: model-port
+vendor: vendor-demo
+base_model: torchvision/mobilenet-v3-small
+
+dataset:
+  name: cifar10-public-subset
+  split: train
+  local_jsonl: data/cifar10_subset.jsonl
+  root_dir: data
+  max_samples: 500
+  train_ratio: 0.8
+  image_size: 224
+  classes:
+    - airplane
+    - automobile
+    - bird
+    - cat
+    - deer
+    - dog
+    - frog
+    - horse
+    - ship
+    - truck
+
+training:
+  method: supervised-classification
+  model_name: edge-object-classifier
+  version: 0.3.0
+  output_dir: artifacts/models/edge-object-classifier-v0.3.0
+  pretrained: true
+  freeze_backbone: true
+  num_train_epochs: 10
+  per_device_train_batch_size: 32
+  learning_rate: 0.001
+
+inference:
+  batch_size: 1
+  image_size: 224
+
+wandb:
+  project: model-port
+  job_type: train-classifier
+  tags: [mobilenetv3, classifier, edge-target, cifar10, v0.3.0]
+
+validation:
+  active_profile: edge_target
+  quality_gates:
+    cloud_sim:
+      min_accuracy: 0.55
+      max_p95_latency_ms: 3000
+      max_failure_rate: 0.01
+      max_drift_score: 0.3
+      max_model_size_mb: 100
+    edge_target:
+      min_accuracy: 0.55
+      max_p95_latency_ms: 100
+      max_failure_rate: 0.01
+      max_drift_score: 0.3
+      max_model_size_mb: 100

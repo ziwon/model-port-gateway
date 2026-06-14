@@ -1,67 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1240" viewBox="0 0 2200 1240" role="img" aria-labelledby="title desc">
-  <title id="title">model-port Architecture</title>
-  <desc id="desc">Local-first ModelOps gateway flow from vendor submission through training, W&amp;B tracking, evaluation, registry promotion, and future rollout telemetry.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="860" viewBox="50 240 2100 860" role="img" aria-labelledby="title desc">
+  <title id="title">model-port Architecture Blocks</title>
+  <desc id="desc">Five architecture blocks covering vendors, local training, W&amp;B artifacts, gateway, and rollout.</desc>
   <defs>
     <style>
       .bg { fill: #f6f8fc; }
       text { font-family: Inter, Arial, sans-serif; }
-      .title { fill: #172033; font-size: 54px; font-weight: 700; }
-      .subtitle { fill: #607086; font-size: 24px; font-weight: 400; }
       .lane { fill: #ffffff; stroke: #cfd8e6; stroke-width: 2; }
       .lane-shadow { fill: #d9e2ef; opacity: .45; }
       .lane-title { fill: #68758a; font-size: 28px; font-weight: 700; }
       .card-title { fill: #1e293b; font-size: 22px; font-weight: 700; }
       .card-body { fill: #334155; font-size: 17px; font-weight: 400; }
-      .small { fill: #607086; font-size: 15px; font-weight: 400; }
-      .tiny { fill: #718096; font-size: 13px; font-weight: 400; }
-      .badge { fill: #ffffff; stroke-width: 2; }
-      .badge-text { font-size: 15px; font-weight: 700; }
       .vendor { fill: #dbeafe; stroke: #3b82f6; stroke-width: 3; }
       .train { fill: #dcfce7; stroke: #22a35a; stroke-width: 3; }
       .wandb { fill: #fef3c7; stroke: #d99a00; stroke-width: 3; }
       .gateway { fill: #ede9fe; stroke: #8b5cf6; stroke-width: 3; }
       .blocked { fill: #fee2e2; stroke: #ef4444; stroke-width: 3; }
       .rollout { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 3; }
-      .arrow { fill: none; stroke: #64748b; stroke-width: 3; }
-      .arrow-soft { fill: none; stroke: #94a3b8; stroke-width: 2.5; }
-      .arrow-pass { fill: none; stroke: #22a35a; stroke-width: 3; }
-      .arrow-fail { fill: none; stroke: #ef4444; stroke-width: 3; }
-      .arrow-feedback { fill: none; stroke: #64748b; stroke-width: 2.5; stroke-dasharray: 10 8; }
-      .arrowhead { fill: #64748b; }
-      .arrowhead-soft { fill: #94a3b8; }
-      .arrowhead-pass { fill: #22a35a; }
-      .arrowhead-fail { fill: #ef4444; }
-      .footer-line { stroke: #d8e0ec; stroke-width: 2; }
     </style>
-    <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" viewBox="0 0 6 6">
-      <path d="M 0 0 L 6 3 L 0 6 z" fill="#64748b"/>
-    </marker>
-    <marker id="arrow-soft" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" viewBox="0 0 6 6">
-      <path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8"/>
-    </marker>
-    <marker id="arrow-pass" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" viewBox="0 0 6 6">
-      <path d="M 0 0 L 6 3 L 0 6 z" fill="#22a35a"/>
-    </marker>
-    <marker id="arrow-fail" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" viewBox="0 0 6 6">
-      <path d="M 0 0 L 6 3 L 0 6 z" fill="#ef4444"/>
-    </marker>
   </defs>
 
   <rect class="bg" width="2200" height="1240"/>
-
-  <text class="title" x="84" y="106">model-port Architecture</text>
-  <text class="subtitle" x="84" y="146">Multi-vendor ModelOps gateway for fine-tuning, evaluation, registry governance, and progressive edge rollout</text>
-
-  <g transform="translate(84,174)">
-    <rect class="badge" x="0" y="0" width="248" height="34" rx="17" stroke="#3b82f6"/>
-    <text class="badge-text" x="18" y="23" fill="#1e3a8a">RTX 5080 16GB local-first</text>
-    <rect class="badge" x="268" y="0" width="248" height="34" rx="17" stroke="#d99a00"/>
-    <text class="badge-text" x="286" y="23" fill="#7a4b00">W&amp;B default registry</text>
-    <rect class="badge" x="536" y="0" width="286" height="34" rx="17" stroke="#22a35a"/>
-    <text class="badge-text" x="554" y="23" fill="#166534">quality-gated promotion</text>
-    <rect class="badge" x="842" y="0" width="292" height="34" rx="17" stroke="#8b5cf6"/>
-    <text class="badge-text" x="860" y="23" fill="#5b21b6">edge rollout future layer</text>
-  </g>
 
   <g id="lanes">
     <rect class="lane-shadow" x="70" y="268" width="356" height="788" rx="28"/>
@@ -183,52 +141,4 @@
     <text class="card-body" x="1928" y="911">runtime feedback</text>
   </g>
 
-  <g id="flow-arrows">
-    <path class="arrow" d="M384 407 H490"/>
-    <path class="arrow" d="M384 603 H490"/>
-    <path class="arrow" d="M384 805 H448 C476 805 476 861 490 861"/>
-
-    <path class="arrow-soft" d="M691 488 V542"/>
-    <path class="arrow-soft" d="M691 714 V770"/>
-    <path class="arrow" d="M874 413 H982"/>
-    <path class="arrow" d="M874 636 H982"/>
-    <path class="arrow" d="M874 861 H982"/>
-
-    <path class="arrow" d="M1368 869 H1470"/>
-    <path class="arrow-soft" d="M1638 476 V526"/>
-    <path class="arrow-soft" d="M1638 696 V750"/>
-    <path class="arrow-fail" d="M1638 944 V966"/>
-    <path class="arrow-pass" d="M1788 855 C1848 780 1850 430 1894 414"/>
-
-    <path class="arrow-soft" d="M2002 478 V552"/>
-    <path class="arrow-soft" d="M2002 786 V712"/>
-    <path class="arrow-feedback" d="M1908 858 C1842 860 1842 860 1802 860"/>
-
-    <polygon class="arrowhead" points="490,407 472,398 472,416"/>
-    <polygon class="arrowhead" points="490,603 472,594 472,612"/>
-    <polygon class="arrowhead" points="490,861 472,852 472,870"/>
-    <polygon class="arrowhead-soft" points="691,542 682,524 700,524"/>
-    <polygon class="arrowhead-soft" points="691,770 682,752 700,752"/>
-    <polygon class="arrowhead" points="982,413 964,404 964,422"/>
-    <polygon class="arrowhead" points="982,636 964,627 964,645"/>
-    <polygon class="arrowhead" points="982,861 964,852 964,870"/>
-    <polygon class="arrowhead" points="1470,869 1452,860 1452,878"/>
-    <polygon class="arrowhead-soft" points="1638,526 1629,508 1647,508"/>
-    <polygon class="arrowhead-soft" points="1638,750 1629,732 1647,732"/>
-    <polygon class="arrowhead-fail" points="1638,966 1629,948 1647,948"/>
-    <polygon class="arrowhead-pass" points="1894,414 1874,407 1883,428"/>
-    <polygon class="arrowhead-soft" points="2002,552 1993,534 2011,534"/>
-    <polygon class="arrowhead-soft" points="2002,712 1993,730 2011,730"/>
-    <polygon class="arrowhead" points="1802,860 1820,851 1820,869"/>
-  </g>
-
-  <g id="annotations">
-    <text class="small" x="1742" y="740" fill="#22a35a">passed</text>
-    <text class="small" x="1737" y="902" fill="#ef4444">failed</text>
-    <text class="tiny" x="1788" y="902" fill="#ef4444">keep rejection metadata</text>
-    <text class="tiny" x="1836" y="966">rollback signal</text>
-  </g>
-
-  <line class="footer-line" x1="84" y1="1128" x2="2116" y2="1128"/>
-  <text class="small" x="84" y="1172">Current MVP: Docker Compose + W&amp;B Local + JSON registry. Next: SQLite/Postgres registry, rollout controller, Prometheus/Grafana telemetry, edge-friendly CV model track.</text>
 </svg>

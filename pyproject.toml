@@ -32,7 +32,7 @@ train = [
   "pandas>=2.2",
   "scikit-learn>=1.5",
   "onnx>=1.16",
-  "onnxruntime>=1.18",
+  "onnxruntime>=1.26.0",
   "wandb>=0.18.7,<0.19",
 ]
 dev = [

@@ -22,6 +22,7 @@ from model_port.common.quality import (
     evaluate_quality_gate,
     quality_gate_config,
 )
+from model_port.common.tracking import wandb_enabled, wandb_skip_message
 from model_port.pipelines.eval_wandb import quality_gate_table_rows, wandb_summary
 
 app = typer.Typer(help="Evaluate base/candidate VLM outputs and prepare drift reports.")
@@ -300,10 +301,6 @@ def _build_report(
     }
 
 
-def _wandb_enabled() -> bool:
-    return os.getenv("WANDB_MODE") == "offline" or len(os.getenv("WANDB_API_KEY", "")) >= 40
-
-
 def _log_wandb_table(
     cfg: Any,
     rows: list[dict[str, Any]],
@@ -314,8 +311,8 @@ def _log_wandb_table(
     failures: list[str | None],
     report: dict[str, Any],
 ) -> None:
-    if not _wandb_enabled():
-        print("[yellow]Skipping W&B logging: set WANDB_API_KEY or WANDB_MODE=offline[/yellow]")
+    if not wandb_enabled():
+        print(f"[yellow]{wandb_skip_message()}[/yellow]")
         return
 
     import wandb

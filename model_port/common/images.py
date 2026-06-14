@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import os
 from pathlib import Path
 from typing import Any
 from urllib.request import urlopen
@@ -14,6 +15,11 @@ def load_image(value: str, dataset_dir: Path) -> Any:
         return Image.new("RGB", (224, 224), color=(245, 245, 245))
 
     if value.startswith(("http://", "https://")):
+        if os.getenv("MODEL_PORT_ALLOW_REMOTE_IMAGES", "").lower() not in {"1", "true", "yes"}:
+            raise ValueError(
+                "Remote image URLs are disabled by default. Set "
+                "MODEL_PORT_ALLOW_REMOTE_IMAGES=1 only for trusted datasets."
+            )
         with urlopen(value, timeout=30) as response:
             return Image.open(io.BytesIO(response.read())).convert("RGB")
 

@@ -10,6 +10,7 @@ from rich import print
 
 from model_port.common.config import dump_yaml, load_train_config, load_yaml
 from model_port.common.images import load_image
+from model_port.common.tracking import wandb_enabled
 
 app = typer.Typer(help="Train a small edge-friendly image classifier.")
 
@@ -32,10 +33,6 @@ def _require_train_deps() -> dict[str, Any]:
         "models": models,
         "transforms": transforms,
     }
-
-
-def _wandb_enabled() -> bool:
-    return os.getenv("WANDB_MODE", "").lower() != "disabled"
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -194,7 +191,7 @@ def main(
     criterion = torch.nn.CrossEntropyLoss()
 
     wandb_run = None
-    if _wandb_enabled():
+    if wandb_enabled():
         try:
             import wandb
 

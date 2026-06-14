@@ -17,6 +17,7 @@ from model_port.common.quality import (
     evaluate_quality_gate,
     quality_gate_config,
 )
+from model_port.common.tracking import wandb_enabled
 from model_port.pipelines.eval_wandb import quality_gate_table_rows, wandb_summary
 from model_port.pipelines.train_classifier import _make_model, _read_jsonl, _transforms
 
@@ -89,7 +90,7 @@ def _load_model(cfg: Any, model_dir: Path, classes: list[str], deps: dict[str, A
         pretrained=bool(cfg.training.get("pretrained", False)),
         freeze_backbone=bool(cfg.training.get("freeze_backbone", False)),
     )
-    state = torch.load(weights_path, map_location="cpu")
+    state = torch.load(weights_path, map_location="cpu", weights_only=True)
     model.load_state_dict(state)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -213,17 +214,13 @@ def _build_report(
     }
 
 
-def _wandb_enabled() -> bool:
-    return os.getenv("WANDB_MODE", "").lower() != "disabled"
-
-
 def _log_wandb(
     cfg: Any,
     report: dict[str, Any],
     predictions: list[dict[str, Any]],
     dataset_dir: Path,
 ) -> None:
-    if not _wandb_enabled():
+    if not wandb_enabled():
         return
     try:
         import wandb

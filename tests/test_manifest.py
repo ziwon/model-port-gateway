@@ -2,7 +2,12 @@ import pytest
 
 from model_port.common.config import dump_yaml, load_yaml
 from model_port.registry.build_manifest import build_manifest
-from model_port.registry.store import JsonModelRegistry, ModelRegistration
+from model_port.registry.store import (
+    JsonModelRegistry,
+    ModelRegistration,
+    SqliteModelRegistry,
+    open_model_registry,
+)
 from model_port.registry.wandb_utils import (
     artifact_aliases,
     lifecycle_aliases,
@@ -439,3 +444,66 @@ def test_registry_derives_quality_gate_from_manifest_only(tmp_path):
 
     assert record["quality_gate_passed"] is False
     assert record["promotion_blocked"] is True
+
+
+def test_sqlite_registry_registers_and_promotes_passed_model(tmp_path):
+    manifest = build_manifest(
+        load_yaml("configs/model_manifest.example.yaml"),
+        {
+            "model_name": "smart-captioner",
+            "version": "0.1.5",
+            "vendor": "vendor-demo",
+            "metrics": {
+                "p95_latency_ms": 1800.0,
+                "failure_rate": 0.0,
+                "drift_score": 0.0388,
+            },
+            "quality_gate": {
+                "profile": "cloud-sim",
+                "max_p95_latency_ms": 3000.0,
+                "max_failure_rate": 0.01,
+                "max_drift_score": 0.2,
+                "passed": True,
+                "reject_reason": None,
+            },
+        },
+    )
+    manifest_path = tmp_path / "manifest.yaml"
+    dump_yaml(manifest, manifest_path)
+
+    registry = SqliteModelRegistry(tmp_path / "registry" / "models.db")
+    record = registry.register(
+        ModelRegistration(
+            vendor="vendor-demo",
+            model_name="smart-captioner",
+            version="0.1.5",
+            manifest_path=str(manifest_path),
+            stage="candidate",
+        )
+    )
+
+    assert record["id"] == "vendor-demo.smart-captioner.0.1.5"
+    assert registry.get("vendor-demo.smart-captioner.0.1.5") == record
+    assert len(registry.list()) == 1
+
+    promote_resp = registry.promote("vendor-demo.smart-captioner.0.1.5", "staging")
+
+    assert promote_resp == {
+        "status": "promoted",
+        "from_stage": "candidate",
+        "to_stage": "staging",
+        "model": "vendor-demo.smart-captioner.0.1.5",
+    }
+    assert registry.get("vendor-demo.smart-captioner.0.1.5")["stage"] == "staging"
+    assert registry.get("vendor-demo.smart-captioner.0.1.5")["deployment"]["stage"] == "staging"
+
+
+def test_open_model_registry_uses_sqlite_backend(monkeypatch, tmp_path):
+    registry_path = tmp_path / "models.db"
+    monkeypatch.setenv("MODEL_PORT_REGISTRY_BACKEND", "sqlite")
+    monkeypatch.setenv("MODEL_PORT_REGISTRY_PATH", str(registry_path))
+
+    registry = open_model_registry()
+
+    assert isinstance(registry, SqliteModelRegistry)
+    assert registry.path == registry_path

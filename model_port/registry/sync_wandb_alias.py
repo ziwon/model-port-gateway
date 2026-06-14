@@ -8,7 +8,7 @@ import typer
 from rich import print
 
 from model_port.common.config import load_yaml
-from model_port.registry.store import JsonModelRegistry
+from model_port.registry.store import default_registry_path, open_model_registry
 from model_port.registry.wandb_utils import (
     lifecycle_aliases,
     wandb_project,
@@ -26,10 +26,15 @@ def main(
         "--stage",
         help="Expected current stage. If set, it must match the local registry record.",
     ),
-    registry_path: Path = typer.Option(
-        Path("artifacts/registry/models.json"),
+    registry_path: Path | None = typer.Option(
+        None,
         "--registry-path",
-        help="Local model-port registry JSON path.",
+        help="Local model-port registry path. Defaults from MODEL_PORT_REGISTRY_BACKEND.",
+    ),
+    registry_backend: str | None = typer.Option(
+        None,
+        "--registry-backend",
+        help="Registry backend: json or sqlite. Defaults from MODEL_PORT_REGISTRY_BACKEND.",
     ),
     source_alias: str | None = typer.Option(
         None,
@@ -43,7 +48,11 @@ def main(
     ),
     dry_run: bool = False,
 ) -> None:
-    registry = JsonModelRegistry(registry_path)
+    resolved_path = registry_path or default_registry_path(registry_backend)
+    try:
+        registry = open_model_registry(registry_backend, resolved_path)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
     record = registry.get(model_id)
     if not record:
         raise typer.BadParameter(f"model not found in local registry: {model_id}")
@@ -82,6 +91,8 @@ def main(
         print({
             "model_id": model_id,
             "stage": record_stage,
+            "registry_backend": registry_backend or os.getenv("MODEL_PORT_REGISTRY_BACKEND", "json"),
+            "registry_path": str(resolved_path),
             "registry_name": registry_name,
             "collection": collection,
             "target_path": target_path,

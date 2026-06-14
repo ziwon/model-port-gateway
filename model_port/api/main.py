@@ -1,13 +1,16 @@
-from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from model_port.registry.store import JsonModelRegistry, ModelRegistration as StoreRegistration
+from model_port.registry.store import (
+    JsonModelRegistry,
+    ModelRegistration as StoreRegistration,
+    SqliteModelRegistry,
+    open_model_registry,
+)
 
 app = FastAPI(title="model-port API", version="0.1.0")
-REGISTRY_PATH = Path("artifacts/registry/models.json")
 
 
 class ModelSubmission(BaseModel):
@@ -81,5 +84,8 @@ def promote_model(model_id: str, req: PromotionRequest) -> dict[str, Any]:
     return result
 
 
-def _registry() -> JsonModelRegistry:
-    return JsonModelRegistry(REGISTRY_PATH)
+def _registry() -> JsonModelRegistry | SqliteModelRegistry:
+    try:
+        return open_model_registry()
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

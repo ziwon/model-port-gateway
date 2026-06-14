@@ -145,7 +145,7 @@ flowchart TD
 
   subgraph Gateway["model-port API Gateway"]
     API["FastAPI<br/>/models/register<br/>/models/{id}/promote"]
-    STORE["Local Registry Store<br/>models.json"]
+    STORE["Local Registry Store<br/>JSON or SQLite"]
     GATE["Promotion Gate<br/>quality policy check"]
   end
 

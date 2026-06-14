@@ -219,14 +219,22 @@ metadata instead of deleting them. This preserves vendor lineage, evaluation
 evidence, and promotion history for auditability.
 
 Vendors cannot self-declare a model as passed. Promotion eligibility is derived
-from `evaluation.passed` in the evaluated manifest. The current local registry
-uses JSON for transparency; production backends should use PostgreSQL, SQLite
-with locking, or object storage with versioned writes.
+from `evaluation.passed` in the evaluated manifest. The local registry defaults
+to JSON for transparency, and can switch to SQLite for local production-style
+state with database-backed writes.
 
 Promotion follows a strict lifecycle: `candidate -> staging -> production`.
 Direct `candidate -> production` promotion is blocked, and production is treated
 as a terminal stage. This keeps lifecycle governance separate from vendor input
 and makes every stage transition explicit.
+
+Switch the local registry backend with environment variables:
+
+```bash
+MODEL_PORT_REGISTRY_BACKEND=sqlite \
+MODEL_PORT_REGISTRY_PATH=artifacts/registry/models.db \
+just api-register-v030
+```
 
 ## Model Promotion Demo
 
@@ -549,8 +557,8 @@ Next scope:
   and future `tflite`.
 - Add a rollout simulation that assigns a canary percentage and records rollback
   metadata after staging promotion.
-- Move registry persistence from local JSON toward SQLite as the bridge between
-  the Compose-based local runtime and the later k3s/Helm deployment.
+- Promote SQLite to the default local registry after the API and W&B alias sync
+  paths are stable across the Compose flow.
 
 Current demo outcome:
 
@@ -588,8 +596,8 @@ runtime comparison is the next implementation step after this baseline.
 - [x] W&B model registry with aliases: `candidate`, `staging`, `production`
 - [x] W&B alias sync from API registry stage
 - [x] ONNX export and latency comparison
+- [x] SQLite registry backend for local production simulation
 - [ ] Quantized edge-runtime comparison
-- [ ] SQLite registry backend for local production simulation
 - [ ] Real SmolVLM2 LoRA fine-tuning on RTX 5080
 - [ ] FastAPI vendor model intake API
 - [ ] Canary rollout controller

@@ -7,6 +7,8 @@ services:
     command: uvicorn model_port.api.main:app --reload --host 0.0.0.0 --port 8080
     environment:
       MODEL_PORT_ENV: local
+      MODEL_PORT_REGISTRY_BACKEND: ${MODEL_PORT_REGISTRY_BACKEND:-json}
+      MODEL_PORT_REGISTRY_PATH: ${MODEL_PORT_REGISTRY_PATH:-}
       WANDB_BASE_URL: http://wandb:8080
       WANDB_API_KEY: ${WANDB_API_KEY:-}
       WANDB_ENTITY: ${WANDB_ENTITY:-}
@@ -29,6 +31,8 @@ services:
     command: sleep infinity
     environment:
       MODEL_PORT_ENV: local
+      MODEL_PORT_REGISTRY_BACKEND: ${MODEL_PORT_REGISTRY_BACKEND:-json}
+      MODEL_PORT_REGISTRY_PATH: ${MODEL_PORT_REGISTRY_PATH:-}
       WANDB_BASE_URL: http://wandb:8080
       WANDB_API_KEY: ${WANDB_API_KEY:-}
       WANDB_ENTITY: ${WANDB_ENTITY:-}
@@ -62,6 +66,8 @@ services:
     command: sleep infinity
     environment:
       MODEL_PORT_ENV: local
+      MODEL_PORT_REGISTRY_BACKEND: ${MODEL_PORT_REGISTRY_BACKEND:-json}
+      MODEL_PORT_REGISTRY_PATH: ${MODEL_PORT_REGISTRY_PATH:-}
       WANDB_BASE_URL: http://wandb:8080
       WANDB_API_KEY: ${WANDB_API_KEY:-}
       WANDB_ENTITY: ${WANDB_ENTITY:-}

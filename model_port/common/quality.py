@@ -80,6 +80,8 @@ def evaluate_quality_gate(metrics: dict[str, float], gate: dict[str, Any]) -> di
         gate["max_model_size_mb"]
     ):
         failures.append("model_size_mb_exceeded")
+    if "min_accuracy" in gate and metrics.get("accuracy", 0.0) < float(gate["min_accuracy"]):
+        failures.append("accuracy_below_threshold")
 
     result = {
         "profile": gate.get("profile", "cloud-sim"),
@@ -91,6 +93,8 @@ def evaluate_quality_gate(metrics: dict[str, float], gate: dict[str, Any]) -> di
     }
     if "max_model_size_mb" in gate:
         result["max_model_size_mb"] = float(gate["max_model_size_mb"])
+    if "min_accuracy" in gate:
+        result["min_accuracy"] = float(gate["min_accuracy"])
     return result
 
 

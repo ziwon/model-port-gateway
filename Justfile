@@ -42,6 +42,10 @@ prepare-data:
     docker compose up -d --build trainer
     docker compose exec trainer python scripts/prepare_sample_dataset.py --output data/sample_captions.jsonl --num-samples 32
 
+prepare-scene-data:
+    docker compose up -d --build trainer
+    docker compose exec trainer python scripts/prepare_scene_dataset.py --output data/scene_classification.jsonl --num-samples 200
+
 train:
     docker compose up -d --build wandb trainer
     docker compose exec trainer python -m model_port.pipelines.finetune --config configs/train.smolvlm.yaml
@@ -58,6 +62,14 @@ evaluate-v011:
     docker compose up -d --build wandb trainer
     docker compose exec trainer python -m model_port.pipelines.evaluate --config configs/train.smolvlm.v0.1.1.yaml --model-dir artifacts/models/smolvlm2-caption-lora --dataset data/sample_captions.jsonl --output artifacts/eval/eval_report-v0.1.1.json --version 0.1.1
 
+train-v020:
+    docker compose up -d --build wandb trainer
+    docker compose exec trainer python -m model_port.pipelines.train_classifier --config configs/train.edge_classifier.v0.2.0.yaml
+
+evaluate-v020:
+    docker compose up -d --build wandb trainer
+    docker compose exec trainer python -m model_port.pipelines.evaluate_classifier --config configs/train.edge_classifier.v0.2.0.yaml --model-dir artifacts/models/edge-scene-classifier-v0.2.0 --dataset data/scene_classification.jsonl --output artifacts/eval/eval_report-v0.2.0.json --version 0.2.0
+
 build-manifest:
     docker compose up -d --build trainer
     docker compose exec trainer python -m model_port.registry.build_manifest --base configs/model_manifest.example.yaml --eval-report artifacts/eval/eval_report.json --output artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml
@@ -65,6 +77,10 @@ build-manifest:
 build-manifest-v011:
     docker compose up -d --build trainer
     docker compose exec trainer python -m model_port.registry.build_manifest --base configs/model_manifest.example.yaml --eval-report artifacts/eval/eval_report-v0.1.1.json --output artifacts/manifests/vendor-demo-smart-captioner-0.1.1.yaml
+
+build-manifest-v020:
+    docker compose up -d --build trainer
+    docker compose exec trainer python -m model_port.registry.build_manifest --base configs/model_manifest.edge_classifier.yaml --eval-report artifacts/eval/eval_report-v0.2.0.json --output artifacts/manifests/vendor-demo-edge-scene-classifier-0.2.0.yaml
 
 register:
     docker compose up -d --build wandb trainer
@@ -74,6 +90,10 @@ register-v011:
     docker compose up -d --build wandb trainer
     docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-smart-captioner-0.1.1.yaml --eval-report artifacts/eval/eval_report-v0.1.1.json --model-dir artifacts/models/smolvlm2-caption-lora --aliases candidate,cloud-sim-passed,v0.1.1
 
+register-v020:
+    docker compose up -d --build wandb trainer
+    docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-edge-scene-classifier-0.2.0.yaml --eval-report artifacts/eval/eval_report-v0.2.0.json --model-dir artifacts/models/edge-scene-classifier-v0.2.0 --aliases candidate,edge-target-passed,v0.2.0
+
 api-register:
     docker compose up -d --build api
     curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/register -H 'Content-Type: application/json' -d '{"vendor":"vendor-demo","model_name":"smart-captioner","version":"0.1.0","manifest_path":"artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml","stage":"candidate"}'
@@ -82,8 +102,15 @@ api-register-v011:
     docker compose up -d --build api
     curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/register -H 'Content-Type: application/json' -d '{"vendor":"vendor-demo","model_name":"smart-captioner","version":"0.1.1","manifest_path":"artifacts/manifests/vendor-demo-smart-captioner-0.1.1.yaml","stage":"candidate"}'
 
+api-register-v020:
+    docker compose up -d --build api
+    curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/register -H 'Content-Type: application/json' -d '{"vendor":"vendor-demo","model_name":"edge-scene-classifier","version":"0.2.0","manifest_path":"artifacts/manifests/vendor-demo-edge-scene-classifier-0.2.0.yaml","stage":"candidate"}'
+
 promote-v011:
     curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/vendor-demo.smart-captioner.0.1.1/promote -H 'Content-Type: application/json' -d '{"target_stage":"staging"}'
+
+promote-v020:
+    curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/vendor-demo.edge-scene-classifier.0.2.0/promote -H 'Content-Type: application/json' -d '{"target_stage":"staging"}'
 
 local-mlops:
     docker compose up -d --build wandb api trainer

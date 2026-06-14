@@ -2,6 +2,7 @@ import pytest
 
 from model_port.common.dataset import normalize_caption_row, split_rows
 from model_port.common.quality import (
+    evaluate_quality_gate,
     evaluate_all_quality_gates,
     quality_gate_config,
     quality_gate_profiles,
@@ -65,6 +66,31 @@ def test_quality_gates_accept_canonical_and_legacy_names():
     results = evaluate_all_quality_gates(metrics, validation)
     assert results["cloud-sim"]["passed"] is True
     assert results["edge-target"]["passed"] is False
+
+
+def test_quality_gate_checks_accuracy_and_model_size():
+    metrics = {
+        "accuracy": 0.75,
+        "p95_latency_ms": 20.0,
+        "failure_rate": 0.0,
+        "drift_score": 0.0,
+        "model_size_mb": 12.0,
+    }
+    gate = {
+        "profile": "edge-target",
+        "min_accuracy": 0.8,
+        "max_p95_latency_ms": 100,
+        "max_failure_rate": 0.01,
+        "max_drift_score": 0.2,
+        "max_model_size_mb": 10,
+    }
+
+    result = evaluate_quality_gate(metrics, gate)
+
+    assert result["passed"] is False
+    assert result["reject_reason"] == "model_size_mb_exceeded"
+    assert result["min_accuracy"] == 0.8
+    assert result["max_model_size_mb"] == 10
 
 
 def test_transformers_multimodal_auto_class_when_installed():

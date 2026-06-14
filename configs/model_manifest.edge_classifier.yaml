@@ -1,0 +1,51 @@
+model:
+  name: edge-scene-classifier
+  version: 0.2.0
+  vendor: vendor-demo
+  task: image-classification
+  runtime: torchvision
+  base_model: torchvision/mobilenet-v3-small
+  artifact_uri: artifacts/models/edge-scene-classifier-v0.2.0
+  checksum: sha256:placeholder
+  license: Apache-2.0-compatible-check-required
+
+training:
+  method: supervised-classification
+  wandb_project: model-port
+  wandb_run_id: dry-run
+  dataset_name: synthetic-scene-classification
+  dataset_version: sample-v0.2
+
+inference:
+  image_size: 224
+  batch_size: 1
+
+evaluation:
+  profile: edge-target
+  accuracy: null
+  p95_latency_ms: null
+  drift_score: null
+  model_size_mb: null
+  passed: false
+
+quality_gates:
+  cloud_sim:
+    min_accuracy: 0.8
+    max_p95_latency_ms: 3000
+    max_failure_rate: 0.01
+    max_drift_score: 0.2
+    max_model_size_mb: 100
+  edge_target:
+    min_accuracy: 0.8
+    max_p95_latency_ms: 100
+    max_failure_rate: 0.01
+    max_drift_score: 0.2
+    max_model_size_mb: 100
+
+deployment:
+  stage: candidate
+  rollout_strategy: canary
+  canary_percent: 10
+  rollback_policy:
+    max_error_rate: 0.01
+    max_p95_latency_ms: 100

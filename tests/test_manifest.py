@@ -52,18 +52,22 @@ def test_build_manifest_blocks_failed_quality_gate():
         "model_name": "smart-captioner",
         "version": "0.1.0",
         "vendor": "vendor-demo",
-        "metrics": {
+            "metrics": {
+            "accuracy": 0.9,
             "caption_length_mean": 54.5,
             "p50_latency_ms": 2098.4701,
             "p95_latency_ms": 2117.4231,
             "failure_rate": 0.0,
             "drift_score": 0.0388,
+            "model_size_mb": 12.5,
         },
         "quality_gate": {
             "profile": "edge-target",
+            "min_accuracy": 0.8,
             "max_p95_latency_ms": 100.0,
             "max_failure_rate": 0.01,
             "max_drift_score": 0.2,
+            "max_model_size_mb": 100.0,
             "passed": False,
             "reject_reason": "p95_latency_ms_exceeded",
         },
@@ -80,9 +84,11 @@ def test_build_manifest_blocks_failed_quality_gate():
                 "passed": True,
             },
             "edge-target": {
+                "min_accuracy": 0.8,
                 "max_p95_latency_ms": 100.0,
                 "max_failure_rate": 0.01,
                 "max_drift_score": 0.2,
+                "max_model_size_mb": 100.0,
                 "passed": False,
                 "reject_reason": "p95_latency_ms_exceeded",
             },
@@ -93,10 +99,15 @@ def test_build_manifest_blocks_failed_quality_gate():
 
     assert updated["inference"]["max_new_tokens"] == 16
     assert updated["evaluation"]["p95_latency_ms"] == 2117.4231
+    assert updated["evaluation"]["accuracy"] == 0.9
+    assert updated["evaluation"]["min_accuracy"] == 0.8
+    assert updated["evaluation"]["model_size_mb"] == 12.5
     assert updated["evaluation"]["passed"] is False
     assert updated["evaluation"]["reject_reason"] == "p95_latency_ms_exceeded"
     assert updated["quality_gates"]["cloud_sim"]["max_p95_latency_ms"] == 3000.0
     assert updated["quality_gates"]["edge_target"]["max_p95_latency_ms"] == 100.0
+    assert updated["quality_gates"]["edge_target"]["min_accuracy"] == 0.8
+    assert updated["quality_gates"]["edge_target"]["max_model_size_mb"] == 100.0
     assert updated["deployment"]["stage"] == "candidate"
     assert updated["deployment"]["promotion_blocked"] is True
     assert updated["deployment"]["rollout_strategy"] == "none"

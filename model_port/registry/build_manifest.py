@@ -33,10 +33,14 @@ def build_manifest(manifest: dict[str, Any], report: dict[str, Any]) -> dict[str
 
     updated["evaluation"] = {
         "profile": gate.get("profile"),
+        "accuracy": metrics.get("accuracy"),
         "caption_length_mean": metrics.get("caption_length_mean"),
         "caption_length_std": metrics.get("caption_length_std"),
         "p50_latency_ms": metrics.get("p50_latency_ms"),
         "p95_latency_ms": metrics.get("p95_latency_ms"),
+        "runtime_sec": metrics.get("runtime_sec"),
+        "samples_per_second": metrics.get("samples_per_second"),
+        "steps_per_second": metrics.get("steps_per_second"),
         "failure_rate": metrics.get("failure_rate"),
         "drift_score": metrics.get("drift_score"),
         "model_size_mb": metrics.get("model_size_mb"),
@@ -45,6 +49,7 @@ def build_manifest(manifest: dict[str, Any], report: dict[str, Any]) -> dict[str
         "max_failure_rate": gate.get("max_failure_rate"),
         "max_drift_score": gate.get("max_drift_score"),
         "max_model_size_mb": gate.get("max_model_size_mb"),
+        "min_accuracy": gate.get("min_accuracy"),
         "passed": bool(gate.get("passed")),
         "reject_reason": gate.get("reject_reason"),
     }
@@ -76,6 +81,7 @@ def _quality_gates(report: dict[str, Any]) -> dict[str, Any]:
                     "max_failure_rate",
                     "max_drift_score",
                     "max_model_size_mb",
+                    "min_accuracy",
                 )
                 if active.get(key) is not None
             }
@@ -88,6 +94,7 @@ def _quality_gates(report: dict[str, Any]) -> dict[str, Any]:
                 "max_failure_rate",
                 "max_drift_score",
                 "max_model_size_mb",
+                "min_accuracy",
             )
             if gate.get(key) is not None
         }

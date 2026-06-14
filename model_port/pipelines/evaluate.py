@@ -258,6 +258,8 @@ def _build_report(
     length_drift = abs(length_mean - base_length_mean) / max(base_length_mean, 1.0)
     drift_score = min(1.0, round((length_drift + keyword_drift) / 2, 4))
     failure_rate = sum(failure is not None for failure in failures) / max(len(failures), 1)
+    runtime_sec = sum(latencies) / 1000
+    samples_per_second = len(rows) / runtime_sec if runtime_sec > 0 else 0.0
 
     p95_latency = _percentile(latencies, 0.95)
     metrics = {
@@ -265,6 +267,9 @@ def _build_report(
         "caption_length_std": round(statistics.pstdev(lengths), 4) if len(lengths) > 1 else 0.0,
         "p50_latency_ms": round(_percentile(latencies, 0.50), 4),
         "p95_latency_ms": round(p95_latency, 4),
+        "runtime_sec": round(runtime_sec, 4),
+        "samples_per_second": round(samples_per_second, 4),
+        "steps_per_second": round(samples_per_second, 4),
         "failure_rate": round(failure_rate, 4),
         "drift_score": drift_score,
         "model_size_mb": round(_dir_size_mb(model_dir), 4),
@@ -373,12 +378,15 @@ def _log_wandb_table(
                 row["profile"],
             )
 
+        wandb.log({"eval/predictions": table})
+        wandb.log({"eval/quality_gate_table": quality_table})
         wandb.log({
-            "eval/predictions": table,
-            "eval/quality_gate": quality_table,
             "eval/caption_length_mean": report["metrics"]["caption_length_mean"],
             "eval/p50_latency_ms": report["metrics"]["p50_latency_ms"],
             "eval/p95_latency_ms": report["metrics"]["p95_latency_ms"],
+            "eval/runtime": report["metrics"]["runtime_sec"],
+            "eval/samples_per_second": report["metrics"]["samples_per_second"],
+            "eval/steps_per_second": report["metrics"]["steps_per_second"],
             "eval/failure_rate": report["metrics"]["failure_rate"],
             "drift/score": report["metrics"]["drift_score"],
             "quality_gate/passed": int(report["quality_gate"]["passed"]),

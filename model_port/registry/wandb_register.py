@@ -9,7 +9,11 @@ import typer
 from rich import print
 
 from model_port.common.config import load_yaml
-from model_port.registry.wandb_utils import artifact_aliases, wandb_project
+from model_port.registry.wandb_utils import (
+    artifact_aliases,
+    wandb_project,
+    wandb_registry_target_path,
+)
 
 app = typer.Typer(help="Register model metadata to the W&B Model Registry.")
 
@@ -33,7 +37,11 @@ def main(
     data = load_yaml(manifest)
     model = data["model"]
     name = f"{model['vendor']}.{model['name']}"
+    registry_name = os.getenv("WANDB_REGISTRY_NAME", "Model")
     collection = os.getenv("WANDB_REGISTRY_COLLECTION", model["name"])
+    artifact_type = os.getenv("WANDB_ARTIFACT_TYPE", "model")
+    target_path = wandb_registry_target_path(collection, registry_name)
+    entity = os.getenv("WANDB_ENTITY", "").strip()
     report = _load_eval_report(eval_report)
     metadata = _artifact_metadata(data, report)
     aliases_for_artifact = _parse_aliases(aliases) or artifact_aliases(model["version"], report)
@@ -42,15 +50,29 @@ def main(
         print("[yellow]Dry run W&B registration[/yellow]")
         print({
             "registered_model_name": name,
+            "registry_name": registry_name,
+            "collection": collection,
+            "target_path": target_path,
+            "artifact_type": artifact_type,
+            "entity": entity or None,
             "artifact_uri": str(model_dir or model["artifact_uri"]),
             "aliases": aliases_for_artifact,
             "metadata": metadata,
         })
         return
 
+    if not entity:
+        raise typer.BadParameter(
+            "WANDB_ENTITY must be set to a W&B team/entity before linking to the "
+            "Registry. W&B does not link personal-entity artifacts into Registry "
+            "collections. For W&B Local, create or select a team in the UI, set "
+            "WANDB_ENTITY=<team_entity> in .env, then recreate the trainer."
+        )
+
     import wandb
 
     run = wandb.init(
+        entity=entity,
         project=wandb_project(data),
         job_type="registry",
         name=f"register-{name}-{model['version']}",
@@ -59,7 +81,7 @@ def main(
     try:
         artifact = wandb.Artifact(
             name=name.replace(".", "-"),
-            type="model",
+            type=artifact_type,
             metadata=metadata,
         )
         artifact.add_file(str(manifest), name="model_manifest.yaml")
@@ -70,12 +92,17 @@ def main(
         if artifact_dir.is_dir():
             artifact.add_dir(str(artifact_dir))
 
-        logged = run.log_artifact(artifact, aliases=aliases_for_artifact)
-        logged.wait()
-
-        # Link into the W&B Model Registry so it shows up as a managed collection.
-        run.link_artifact(logged, target_path=f"wandb-registry-model/{collection}")
-        print(f"[green]Registered {name}:{model['version']} in W&B registry[/green]")
+        linked = run.link_artifact(
+            artifact=artifact,
+            target_path=target_path,
+            aliases=aliases_for_artifact,
+        )
+        if linked is not None:
+            linked.wait()
+        print(
+            f"[green]Registered {name}:{model['version']} in W&B registry "
+            f"{registry_name}/{collection}[/green]"
+        )
     finally:
         run.finish()
 

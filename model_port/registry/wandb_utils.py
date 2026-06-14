@@ -9,6 +9,11 @@ def wandb_project(data: dict[str, Any]) -> str:
     return os.getenv("WANDB_PROJECT", training.get("wandb_project", "model-port"))
 
 
+def wandb_registry_target_path(collection: str, registry_name: str | None = None) -> str:
+    registry = registry_name or os.getenv("WANDB_REGISTRY_NAME", "Model")
+    return f"wandb-registry-{registry}/{collection}"
+
+
 def artifact_aliases(version: str, report: dict[str, Any] | None) -> list[str]:
     version_alias = f"v{version}"
     aliases = ["candidate"]

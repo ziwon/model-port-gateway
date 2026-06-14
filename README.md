@@ -421,6 +421,23 @@ just register-v030
 just register-production-v030
 ```
 
+The registration script links versions into the W&B Registry target path
+`wandb-registry-Model/<collection>` by default, so the entries appear under the
+**Model** registry card as collections such as `smart-captioner` and
+`edge-object-classifier`. Override the registry or collection with
+`WANDB_REGISTRY_NAME` and `WANDB_REGISTRY_COLLECTION` when needed.
+
+W&B Registry linking requires `WANDB_ENTITY` to point to a team/entity, not a
+personal account entity. If the Registry page shows zero collections, create or
+select a team in W&B Local, set `WANDB_ENTITY=<team_entity>` in `.env`, recreate
+the trainer container, then rerun the relevant `just register-*` command.
+
+If W&B returns `artifact type 'model' is not allowed in the 'Model' registry`,
+open the W&B Registry UI, select **Model**, open the registry settings, and add
+`model` to the accepted artifact types. Alternatively, create a custom registry
+that accepts your chosen type and set `WANDB_REGISTRY_NAME` and
+`WANDB_ARTIFACT_TYPE` in `.env`.
+
 The expected aliases are:
 
 | Model | Version | W&B aliases |

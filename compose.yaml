@@ -9,6 +9,8 @@ services:
       MODEL_PORT_ENV: local
       WANDB_BASE_URL: http://wandb:8080
       WANDB_API_KEY: ${WANDB_API_KEY:-}
+      WANDB_ENTITY: ${WANDB_ENTITY:-}
+      WANDB_ARTIFACT_TYPE: ${WANDB_ARTIFACT_TYPE:-model}
       WANDB_PROJECT: model-port
     ports:
       - "127.0.0.1:${MODEL_PORT_API_PORT:-18080}:8080"
@@ -29,6 +31,8 @@ services:
       MODEL_PORT_ENV: local
       WANDB_BASE_URL: http://wandb:8080
       WANDB_API_KEY: ${WANDB_API_KEY:-}
+      WANDB_ENTITY: ${WANDB_ENTITY:-}
+      WANDB_ARTIFACT_TYPE: ${WANDB_ARTIFACT_TYPE:-model}
       WANDB_PROJECT: model-port
       # Default to offline so training runs without a server account; set
       # WANDB_MODE=online in .env once a valid 40+ char local key is in place.
@@ -60,6 +64,8 @@ services:
       MODEL_PORT_ENV: local
       WANDB_BASE_URL: http://wandb:8080
       WANDB_API_KEY: ${WANDB_API_KEY:-}
+      WANDB_ENTITY: ${WANDB_ENTITY:-}
+      WANDB_ARTIFACT_TYPE: ${WANDB_ARTIFACT_TYPE:-model}
       WANDB_PROJECT: model-port
       WANDB_MODE: ${WANDB_MODE:-offline}
       HF_HOME: /cache/huggingface

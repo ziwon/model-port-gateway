@@ -3,7 +3,11 @@ import pytest
 from model_port.common.config import dump_yaml, load_yaml
 from model_port.registry.build_manifest import build_manifest
 from model_port.registry.store import JsonModelRegistry, ModelRegistration
-from model_port.registry.wandb_utils import artifact_aliases, wandb_project
+from model_port.registry.wandb_utils import (
+    artifact_aliases,
+    wandb_project,
+    wandb_registry_target_path,
+)
 
 
 def test_api_registration_rejects_client_quality_gate_field():
@@ -44,6 +48,20 @@ def test_wandb_project_env_overrides_manifest(monkeypatch):
     monkeypatch.setenv("WANDB_PROJECT", "override-project")
 
     assert wandb_project(load_yaml("configs/model_manifest.example.yaml")) == "override-project"
+
+
+def test_wandb_registry_target_path_defaults_to_model_registry(monkeypatch):
+    monkeypatch.delenv("WANDB_REGISTRY_NAME", raising=False)
+
+    assert wandb_registry_target_path("smart-captioner") == "wandb-registry-Model/smart-captioner"
+
+
+def test_wandb_registry_target_path_accepts_registry_override(monkeypatch):
+    monkeypatch.setenv("WANDB_REGISTRY_NAME", "Edge")
+
+    assert wandb_registry_target_path("edge-object-classifier") == (
+        "wandb-registry-Edge/edge-object-classifier"
+    )
 
 
 def test_wandb_aliases_mark_latency_rejection():

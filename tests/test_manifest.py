@@ -3,7 +3,7 @@ import pytest
 from model_port.common.config import dump_yaml, load_yaml
 from model_port.registry.build_manifest import build_manifest
 from model_port.registry.store import JsonModelRegistry, ModelRegistration
-from model_port.registry.wandb_utils import wandb_project
+from model_port.registry.wandb_utils import artifact_aliases, wandb_project
 
 
 def test_api_registration_rejects_client_quality_gate_field():
@@ -44,6 +44,48 @@ def test_wandb_project_env_overrides_manifest(monkeypatch):
     monkeypatch.setenv("WANDB_PROJECT", "override-project")
 
     assert wandb_project(load_yaml("configs/model_manifest.example.yaml")) == "override-project"
+
+
+def test_wandb_aliases_mark_latency_rejection():
+    aliases = artifact_aliases(
+        "0.1.0",
+        {
+            "quality_gate": {
+                "passed": False,
+                "reject_reason": "p95_latency_ms_exceeded",
+            }
+        },
+    )
+
+    assert aliases == ["candidate", "rejected-latency", "v0.1.0"]
+
+
+def test_wandb_aliases_mark_quality_rejection():
+    aliases = artifact_aliases(
+        "0.2.0",
+        {
+            "quality_gate": {
+                "passed": False,
+                "reject_reason": "accuracy_below_threshold",
+            }
+        },
+    )
+
+    assert aliases == ["candidate", "rejected-quality", "v0.2.0"]
+
+
+def test_wandb_aliases_mark_staging_candidate():
+    aliases = artifact_aliases(
+        "0.3.0",
+        {
+            "quality_gate": {
+                "passed": True,
+                "reject_reason": None,
+            }
+        },
+    )
+
+    assert aliases == ["candidate", "staging", "v0.3.0"]
 
 
 def test_build_manifest_blocks_failed_quality_gate():

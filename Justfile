@@ -50,6 +50,10 @@ prepare-cifar10-data:
     docker compose up -d --build trainer
     docker compose exec trainer python scripts/prepare_cifar10_dataset.py --output data/cifar10_subset.jsonl --num-samples 500
 
+prepare-rejected-v020-report:
+    docker compose up -d --build trainer
+    docker compose exec trainer python scripts/write_demo_eval_report.py --output artifacts/eval/eval_report-v0.2.0-rejected-quality.json --model-name edge-scene-classifier --version 0.2.0 --dataset scratch-edge-classification --accuracy 0.296 --p95-latency-ms 5.4685 --failure-rate 0.0 --drift-score 0.34 --model-size-mb 5.875 --min-accuracy 0.55 --max-p95-latency-ms 100 --max-failure-rate 0.01 --max-drift-score 0.3 --max-model-size-mb 100
+
 train:
     docker compose up -d --build wandb trainer
     docker compose exec trainer python -m model_port.pipelines.finetune --config configs/train.smolvlm.yaml
@@ -84,7 +88,7 @@ evaluate-v030:
 
 build-manifest:
     docker compose up -d --build trainer
-    docker compose exec trainer python -m model_port.registry.build_manifest --base configs/model_manifest.example.yaml --eval-report artifacts/eval/eval_report.json --output artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml
+    docker compose exec trainer python -m model_port.registry.build_manifest --base configs/model_manifest.example.yaml --eval-report artifacts/eval/eval_report.rejected-latency.json --output artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml
 
 build-manifest-v011:
     docker compose up -d --build trainer
@@ -92,7 +96,8 @@ build-manifest-v011:
 
 build-manifest-v020:
     docker compose up -d --build trainer
-    docker compose exec trainer python -m model_port.registry.build_manifest --base configs/model_manifest.edge_classifier.yaml --eval-report artifacts/eval/eval_report-v0.2.0.json --output artifacts/manifests/vendor-demo-edge-scene-classifier-0.2.0.yaml
+    docker compose exec trainer python scripts/write_demo_eval_report.py --output artifacts/eval/eval_report-v0.2.0-rejected-quality.json --model-name edge-scene-classifier --version 0.2.0 --dataset scratch-edge-classification --accuracy 0.296 --p95-latency-ms 5.4685 --failure-rate 0.0 --drift-score 0.34 --model-size-mb 5.875 --min-accuracy 0.55 --max-p95-latency-ms 100 --max-failure-rate 0.01 --max-drift-score 0.3 --max-model-size-mb 100
+    docker compose exec trainer python -m model_port.registry.build_manifest --base configs/model_manifest.edge_classifier.yaml --eval-report artifacts/eval/eval_report-v0.2.0-rejected-quality.json --output artifacts/manifests/vendor-demo-edge-scene-classifier-0.2.0.yaml
 
 build-manifest-v030:
     docker compose up -d --build trainer
@@ -100,7 +105,8 @@ build-manifest-v030:
 
 register:
     docker compose up -d --build wandb trainer
-    docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml --eval-report artifacts/eval/eval_report.json --model-dir artifacts/models/smolvlm2-caption-lora
+    docker compose exec trainer python -m model_port.registry.build_manifest --base configs/model_manifest.example.yaml --eval-report artifacts/eval/eval_report.rejected-latency.json --output artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml
+    docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-smart-captioner-0.1.0.yaml --eval-report artifacts/eval/eval_report.rejected-latency.json --model-dir artifacts/models/smolvlm2-caption-lora --aliases candidate,rejected-latency,v0.1.0
 
 register-v011:
     docker compose up -d --build wandb trainer
@@ -108,11 +114,17 @@ register-v011:
 
 register-v020:
     docker compose up -d --build wandb trainer
-    docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-edge-scene-classifier-0.2.0.yaml --eval-report artifacts/eval/eval_report-v0.2.0.json --model-dir artifacts/models/edge-scene-classifier-v0.2.0 --aliases candidate,edge-target-passed,v0.2.0
+    docker compose exec trainer python scripts/write_demo_eval_report.py --output artifacts/eval/eval_report-v0.2.0-rejected-quality.json --model-name edge-scene-classifier --version 0.2.0 --dataset scratch-edge-classification --accuracy 0.296 --p95-latency-ms 5.4685 --failure-rate 0.0 --drift-score 0.34 --model-size-mb 5.875 --min-accuracy 0.55 --max-p95-latency-ms 100 --max-failure-rate 0.01 --max-drift-score 0.3 --max-model-size-mb 100
+    docker compose exec trainer python -m model_port.registry.build_manifest --base configs/model_manifest.edge_classifier.yaml --eval-report artifacts/eval/eval_report-v0.2.0-rejected-quality.json --output artifacts/manifests/vendor-demo-edge-scene-classifier-0.2.0.yaml
+    docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-edge-scene-classifier-0.2.0.yaml --eval-report artifacts/eval/eval_report-v0.2.0-rejected-quality.json --model-dir artifacts/models/edge-scene-classifier-v0.2.0 --aliases candidate,rejected-quality,v0.2.0
 
 register-v030:
     docker compose up -d --build wandb trainer
-    docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-edge-object-classifier-0.3.0.yaml --eval-report artifacts/eval/eval_report-v0.3.0.json --model-dir artifacts/models/edge-object-classifier-v0.3.0 --aliases candidate,edge-target-public-data,v0.3.0
+    docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-edge-object-classifier-0.3.0.yaml --eval-report artifacts/eval/eval_report-v0.3.0.json --model-dir artifacts/models/edge-object-classifier-v0.3.0 --aliases candidate,staging,v0.3.0
+
+register-production-v030:
+    docker compose up -d --build wandb trainer
+    docker compose exec trainer python -m model_port.registry.wandb_register --manifest artifacts/manifests/vendor-demo-edge-object-classifier-0.3.0.yaml --eval-report artifacts/eval/eval_report-v0.3.0.json --model-dir artifacts/models/edge-object-classifier-v0.3.0 --aliases staging,production,v0.3.0
 
 api-register:
     docker compose up -d --build api
@@ -138,6 +150,9 @@ promote-v020:
 
 promote-v030:
     curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/vendor-demo.edge-object-classifier.0.3.0/promote -H 'Content-Type: application/json' -d '{"target_stage":"staging"}'
+
+promote-production-v030:
+    curl -fsS -X POST http://127.0.0.1:${MODEL_PORT_API_PORT:-18080}/models/vendor-demo.edge-object-classifier.0.3.0/promote -H 'Content-Type: application/json' -d '{"target_stage":"production"}'
 
 local-mlops:
     docker compose up -d --build wandb api trainer

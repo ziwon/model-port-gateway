@@ -66,7 +66,7 @@ flowchart LR
     RUNS["Experiment Runs<br/>loss, lr, GPU memory"]
     TABLES["Eval Tables<br/>image, GT, base pred, candidate pred"]
     ART["Artifacts<br/>dataset + model + eval report"]
-    REG["W&B Model Registry<br/>candidate / passed / rejected"]
+    REG["W&B Model Registry<br/>candidate / staging / production<br/>rejected-latency / rejected-quality"]
   end
 
   subgraph Gateway["model-port API Gateway"]
@@ -130,8 +130,10 @@ evaluation execution. It produces artifacts and reports, but avoids making
 rollout decisions directly.
 
 W&B is the default experiment and artifact system. It stores training runs,
-evaluation tables, model artifacts, aliases, and rejection metadata so a failed
-candidate remains auditable.
+evaluation tables, model artifacts, lifecycle aliases, and rejection metadata so
+both blocked and promoted candidates remain auditable. The MVP uses aliases such
+as `candidate`, `staging`, `production`, `rejected-latency`, and
+`rejected-quality`.
 
 The model-port API gateway owns registration and promotion control. It reads
 the evaluated manifest, persists a local registry record, and blocks promotion

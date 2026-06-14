@@ -243,7 +243,7 @@ The current demo has three promotion experiments:
 - **Experiment 1: Heavy VLM candidate**: `smart-captioner` v0.1.0 is good for
   visual understanding, but fails the strict edge latency gate. Promotion is
   blocked.
-- **Experiment 2: Scratch edge classifier**: `edge-object-classifier` with a
+- **Experiment 2: Scratch edge classifier**: `edge-scene-classifier` with a
   scratch MobileNetV3 backbone passes latency and size gates, but fails accuracy
   and drift gates. Promotion is blocked.
 - **Experiment 3: Pretrained edge classifier**: `edge-object-classifier` v0.3.0
@@ -254,7 +254,7 @@ The current demo has three promotion experiments:
 | Experiment | Model | Training Strategy | Accuracy | p95 Latency | Drift | Size | Gate Result | Promotion |
 |---|---|---|---:|---:|---:|---:|---|---|
 | v0.1.0 | `smart-captioner` | LoRA VLM fine-tuning | N/A | ~2117 ms | 0.0388 | adapter | Failed latency | Blocked |
-| v0.2.x | `edge-object-classifier` | Scratch MobileNetV3 | 0.296 | ~5.47 ms | 0.34 | ~5.88 MB | Failed accuracy/drift | Blocked |
+| v0.2.x | `edge-scene-classifier` | Scratch MobileNetV3 | 0.296 | ~5.47 ms | 0.34 | ~5.88 MB | Failed accuracy/drift | Blocked |
 | v0.3.0 | `edge-object-classifier` | Pretrained MobileNetV3 + classifier head | 0.76 | 5.7473 ms | 0.142 | 5.9484 MB | Passed | Staging |
 
 ### Demo 1: VLM Candidate Rejected
@@ -412,6 +412,31 @@ docker compose exec trainer python -m model_port.registry.wandb_register \
   --aliases candidate,cloud-sim-passed,v0.1.1
 ```
 
+W&B Registry aliases mirror the model lifecycle:
+
+```bash
+# rejected VLM candidate
+just register
+
+# rejected scratch classifier
+just register-v020
+
+# staged pretrained classifier
+just register-v030
+
+# later production alias after an approved production promotion
+just register-production-v030
+```
+
+The expected aliases are:
+
+| Model | Version | W&B aliases |
+|---|---|---|
+| `smart-captioner` | `0.1.0` | `candidate`, `rejected-latency`, `v0.1.0` |
+| `edge-scene-classifier` scratch path | `0.2.x` | `candidate`, `rejected-quality`, `v0.2.0` |
+| `edge-object-classifier` | `0.3.0` | `candidate`, `staging`, `v0.3.0` |
+| `edge-object-classifier` | `0.3.0` production approval | `staging`, `production`, `v0.3.0` |
+
 Register and promote through the API:
 
 ```bash
@@ -495,7 +520,7 @@ after this baseline.
 - [x] Heavy VLM rejection demo
 - [x] Scratch edge classifier rejection demo
 - [x] Public-dataset pretrained edge classifier v0.3.0 promotion demo
-- [ ] W&B model registry with aliases: `candidate`, `staging`, `production`
+- [x] W&B model registry with aliases: `candidate`, `staging`, `production`
 - [ ] ONNX export and latency comparison
 - [ ] Quantized edge-runtime comparison
 - [ ] SQLite registry backend for local production simulation

@@ -9,7 +9,7 @@ import typer
 from rich import print
 
 from model_port.common.config import load_yaml
-from model_port.registry.wandb_utils import wandb_project
+from model_port.registry.wandb_utils import artifact_aliases, wandb_project
 
 app = typer.Typer(help="Register model metadata to the W&B Model Registry.")
 
@@ -36,14 +36,14 @@ def main(
     collection = os.getenv("WANDB_REGISTRY_COLLECTION", model["name"])
     report = _load_eval_report(eval_report)
     metadata = _artifact_metadata(data, report)
-    artifact_aliases = _parse_aliases(aliases) or _artifact_aliases(model["version"], report)
+    aliases_for_artifact = _parse_aliases(aliases) or artifact_aliases(model["version"], report)
 
     if dry_run:
         print("[yellow]Dry run W&B registration[/yellow]")
         print({
             "registered_model_name": name,
             "artifact_uri": str(model_dir or model["artifact_uri"]),
-            "aliases": artifact_aliases,
+            "aliases": aliases_for_artifact,
             "metadata": metadata,
         })
         return
@@ -70,7 +70,7 @@ def main(
         if artifact_dir.is_dir():
             artifact.add_dir(str(artifact_dir))
 
-        logged = run.log_artifact(artifact, aliases=artifact_aliases)
+        logged = run.log_artifact(artifact, aliases=aliases_for_artifact)
         logged.wait()
 
         # Link into the W&B Model Registry so it shows up as a managed collection.
@@ -113,29 +113,6 @@ def _artifact_metadata(data: dict[str, Any], report: dict[str, Any] | None) -> d
         "failure_rate": metrics.get("failure_rate"),
     })
     return metadata
-
-
-def _artifact_aliases(version: str, report: dict[str, Any] | None) -> list[str]:
-    version_alias = f"v{version}"
-    aliases = ["candidate"]
-    if not report:
-        return [*aliases, version_alias]
-
-    gate = report.get("quality_gate", {})
-    if gate.get("passed"):
-        aliases.append("passed")
-        aliases.append(version_alias)
-        return aliases
-
-    reject_reason = gate.get("reject_reason")
-    if reject_reason == "p95_latency_ms_exceeded":
-        aliases.append("rejected-latency")
-    elif reject_reason:
-        aliases.append(f"rejected-{str(reject_reason).replace('_exceeded', '').replace('_', '-')}")
-    else:
-        aliases.append("rejected")
-    aliases.append(version_alias)
-    return aliases
 
 
 def _parse_aliases(aliases: str | None) -> list[str]:

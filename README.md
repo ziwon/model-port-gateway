@@ -506,11 +506,16 @@ Completed baseline scope:
 
 Runtime comparison:
 
-| Runtime | Accuracy | p95 Latency | Size | Gate |
-|---|---:|---:|---:|---|
-| PyTorch eager | 0.7600 | 5.7473 ms | 5.9484 MB | passed |
-| ONNX Runtime CPU | 0.7580 | 22.6464 ms | 5.8389 MB | passed |
-| ONNX Runtime CUDA | 0.7600 | 1.6945 ms | 5.8389 MB | passed |
+| Runtime | Accuracy | p95 Latency | Samples/sec | Size | Gate |
+|---|---:|---:|---:|---:|---|
+| PyTorch eager | 0.7600 | 5.7473 ms | 324.4551 | 5.9484 MB | passed |
+| ONNX Runtime CPU | 0.7580 | 22.6464 ms | 176.3327 | 5.8389 MB | passed |
+| ONNX Runtime CUDA | 0.7600 | 1.6945 ms | 17.4804 | 5.8389 MB | passed |
+
+The CUDA run shows the lowest per-sample p95 latency, while the current
+single-sample evaluation loop still has end-to-end overhead. The comparison is
+therefore used to compare runtime behavior and gate eligibility, not as a final
+throughput benchmark.
 
 Run the comparison:
 

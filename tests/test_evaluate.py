@@ -99,6 +99,7 @@ def test_runtime_comparison_markdown_table():
             "runtime": "PyTorch eager",
             "accuracy": 0.76,
             "p95_latency_ms": 5.7473,
+            "samples_per_second": 324.4551,
             "model_size_mb": 5.9484,
             "gate": "passed",
         },
@@ -106,16 +107,17 @@ def test_runtime_comparison_markdown_table():
             "runtime": "ONNX Runtime CPU",
             "accuracy": None,
             "p95_latency_ms": None,
+            "samples_per_second": None,
             "model_size_mb": None,
             "gate": "TBD",
         },
     ])
 
     assert table == "\n".join([
-        "| Runtime | Accuracy | p95 Latency | Size | Gate |",
-        "|---|---:|---:|---:|---|",
-        "| PyTorch eager | 0.7600 | 5.7473 ms | 5.9484 MB | passed |",
-        "| ONNX Runtime CPU | TBD | TBD ms | TBD MB | TBD |",
+        "| Runtime | Accuracy | p95 Latency | Samples/sec | Size | Gate |",
+        "|---|---:|---:|---:|---:|---|",
+        "| PyTorch eager | 0.7600 | 5.7473 ms | 324.4551 | 5.9484 MB | passed |",
+        "| ONNX Runtime CPU | TBD | TBD ms | TBD | TBD MB | TBD |",
     ])
 
 

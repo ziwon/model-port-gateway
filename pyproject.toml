@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2.13.4",
   "pydantic-settings>=2.14.2",
-  "typer[all]>=0.26.8",
+  "typer[all]>=0.27.0",
   "rich>=15.0.0",
   "pyyaml>=6.0.3",
 ]
@@ -16,32 +16,32 @@ registry = [
   # Cap below 0.27: newer wandb tightened client-side API-key validation
   # (requires a 40+ char secret) and rejects the local W&B server's
   # `wandb_v1_` keys, which the server itself accepts.
-  "wandb>=0.28.0,<0.29",
+  "wandb>=0.28.1,<0.29",
 ]
 train = [
-  "torch>=2.12.1",
-  "torchvision>=0.27.1",
-  "transformers>=5.12.1",
-  "datasets>=5.0.0",
+  "torch>=2.13.0",
+  "torchvision>=0.28.0",
+  "transformers>=5.14.1",
+  "datasets>=5.0.1",
   "accelerate>=1.14.0",
-  "peft>=0.19.1",
-  "trl>=1.7.0",
-  "pillow>=12.2.0",
+  "peft>=0.20.0",
+  "trl>=1.9.2",
+  "pillow>=12.3.0",
   "num2words>=0.5.14",
-  "bitsandbytes>=0.49.2; platform_system == 'Linux'",
-  "pandas>=3.0.4",
+  "bitsandbytes>=0.50.0; platform_system == 'Linux'",
+  "pandas>=3.0.5",
   "scikit-learn>=1.9.0",
   "onnx>=1.22.0",
-  "onnxruntime>=1.27.0",
-  "wandb>=0.28.0,<0.29",
+  "onnxruntime>=1.28.0",
+  "wandb>=0.28.1,<0.29",
 ]
 dev = [
   "pytest>=9.1.1",
-  "ruff>=0.15.20",
+  "ruff>=0.16.0",
 ]
 api = [
-  "fastapi>=0.138.1",
-  "uvicorn[standard]>=0.49.0",
+  "fastapi>=0.141.1",
+  "uvicorn[standard]>=0.52.0",
 ]
 
 [tool.ruff]
